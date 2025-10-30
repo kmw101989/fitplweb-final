@@ -1,10 +1,32 @@
+# netlify.toml
 [build]
-  publish = "mainpage-website"
+  publish   = "."                   # 루트 전체 서빙
+  functions = "netlify/functions"
+
+[dev]
+  framework = "#static"
+  port      = 8888
   functions = "netlify/functions"
 
 [functions]
-  node_bundler = "esbuild"
+  node_bundler          = "esbuild"
+  external_node_modules = ["mysql2"]
 
-[functions]
-  name = "db"
-  timeout = 26
+[build.environment]
+  NODE_VERSION = "20"
+
+# --- 라우팅 ---
+# 기본 진입은 mainpage-website
+[[redirects]]
+  from = "/"
+  to   = "/mainpage-website/index.html"
+  status = 200
+
+# fitpl-website 진입
+[[redirects]]
+  from = "/fitpl-website"
+  to   = "/fitpl-website/index.html"
+  status = 200
+
+# (필요 시) 정적 파일 직접 경로도 매핑 가능
+# [[redirects]] ... (생략)

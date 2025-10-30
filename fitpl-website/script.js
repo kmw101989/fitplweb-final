@@ -1009,3 +1009,109 @@ window.addEventListener("load", () => {
     img.style.transition = "opacity 0.3s ease";
   });
 });
+
+// ---- 유틸 ----
+async function get(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+const rowsOf = (p) => p?.rows || p?.data?.rows || [];
+
+// ---- 스타일 주입 (CSS 파일 건드리지 않음) ----
+(function injectStyle() {
+  const css = `
+  .fitpl-guest { max-width: 1200px; margin: 24px auto; padding: 0 16px; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif; }
+  .fitpl-guest h2 { margin: 16px 0 12px; font-size: 20px; }
+  .fitpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .fitpl-card { border: 1px solid #eee; border-radius: 12px; padding: 10px; background:#fff; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  .fitpl-card img { width: 100%; height: 170px; object-fit: cover; border-radius: 10px; }
+  .fitpl-brand { margin-top: 8px; font-size: 12px; color:#555; }
+  .fitpl-name { margin-top: 4px; font-size: 13px; line-height: 1.3; height: 34px; overflow: hidden; }
+  .fitpl-price { margin-top: 6px; font-weight: 700; }
+  `;
+  const style = document.createElement("style");
+  style.textContent = css;
+  document.head.appendChild(style);
+})();
+
+// ---- 컨테이너 생성 (HTML 수정 없이 동적 삽입) ----
+function ensureContainers() {
+  let root = document.querySelector("#fitpl-guest-root");
+  if (!root) {
+    root = document.createElement("section");
+    root.id = "fitpl-guest-root";
+    root.className = "fitpl-guest";
+    // 페이지 최상단에 삽입 (필요시 위치 바꾸려면 여기만 수정)
+    document.body.prepend(root);
+  }
+  if (!document.querySelector("#guestClimate")) {
+    root.insertAdjacentHTML(
+      "beforeend",
+      `
+      <div id="guestClimateWrap">
+        <h2>기후 기반 추천</h2>
+        <div id="guestClimate" class="fitpl-grid"></div>
+      </div>
+    `
+    );
+  }
+  if (!document.querySelector("#guestActivity")) {
+    root.insertAdjacentHTML(
+      "beforeend",
+      `
+      <div id="guestActivityWrap" style="margin-top:20px">
+        <h2>활동 기반 추천</h2>
+        <div id="guestActivity" class="fitpl-grid"></div>
+      </div>
+    `
+    );
+  }
+}
+
+function card(r) {
+  const price = Number(r.price || 0).toLocaleString();
+  const name = (r.product_name || "").replace(/\s+/g, " ").trim();
+  const brand = r.brand || "";
+  return `
+    <a class="fitpl-card" href="${
+      r.product_url || "#"
+    }" target="_blank" rel="noopener">
+      <img src="${r.img_url || ""}" alt="${name}">
+      <div class="fitpl-brand">${brand}</div>
+      <div class="fitpl-name">${name}</div>
+      <div class="fitpl-price">${price}원</div>
+    </a>
+  `;
+}
+
+function renderList(selector, rows) {
+  const el = document.querySelector(selector);
+  if (!el) return;
+  el.innerHTML = (rows || []).slice(0, 20).map(card).join("");
+}
+
+async function loadGuestReco() {
+  ensureContainers();
+  const base = "/.netlify/functions/db";
+  try {
+    const [climate, activity] = await Promise.all([
+      get(`${base}?op=guest_reco_climate`),
+      get(`${base}?op=guest_reco_activity`),
+    ]);
+    renderList("#guestClimate", rowsOf(climate));
+    renderList("#guestActivity", rowsOf(activity));
+  } catch (e) {
+    console.error("게스트 추천 로딩 실패:", e);
+    // 최소한의 오류 메시지 표시
+    ensureContainers();
+    const wrap = document.querySelector("#fitpl-guest-root");
+    wrap &&
+      wrap.insertAdjacentHTML(
+        "beforeend",
+        `<p style="color:#c00">추천을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</p>`
+      );
+  }
+}
+
+document.addEventListener("DOMContentLoaded", loadGuestReco);

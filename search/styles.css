@@ -1,0 +1,633 @@
+/* Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Inter", "Pretendard", -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, sans-serif;
+  background-color: #f5f5f5;
+  color: #222222;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* Detailpage의 location-tag(active) 스타일을 카테고리 태그에 적용 */
+.sidebar .category-tags-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar .category-tags-section .category-tag {
+  background-color: #ffffff;
+  border: 1px solid #000000; /* active 기준 */
+  color: #000000;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: "Pretendard", sans-serif;
+  cursor: pointer;
+  min-width: 110px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.sidebar .category-tags-section .category-tag:hover {
+  background-color: #f5f5f5;
+}
+
+/* 메인 프레임 컨테이너 */
+.search-page-frame {
+  width: 1440px;
+  height: 405px;
+  background-color: transparent;
+  margin: 0 232.5px;
+  padding: 0;
+  border: 0;
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+}
+
+/* 메인 콘텐츠 영역 */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 사이드바 영역 */
+.sidebar {
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* 검색바 섹션 */
+.search-bar-section {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.search-bar-container {
+  display: flex;
+  align-items: center;
+  background-color: #ffffff;
+  border-radius: 4px;
+  padding: 8px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.search-input-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  font-family: "Inter", sans-serif;
+  color: #8a8a8a;
+  background: transparent;
+}
+
+.search-input::placeholder {
+  color: #8a8a8a;
+}
+
+.search-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666666;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-button {
+  background-color: #f5f5f5;
+  border: none;
+  width: 32px;
+  height: 36px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 18px;
+  color: #666666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 섹션 공통 스타일 */
+.recent-search-section,
+.recent-brand-section,
+.popular-search-section,
+.trending-search-section {
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-family: "Pretendard", sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: #222222;
+  margin: 0;
+}
+
+.update-time {
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  color: #666666;
+  font-weight: 400;
+}
+
+.delete-all-btn {
+  background: none;
+  border: none;
+  font-family: "Pretendard", sans-serif;
+  font-size: 14px;
+  color: #666666;
+  cursor: pointer;
+  font-weight: 400;
+}
+
+/* 태그 컨테이너 */
+.tag-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.search-tag,
+.brand-tag {
+  background-color: #ffffff;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  color: #666666;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.search-tag:hover,
+.brand-tag:hover {
+  background-color: #f8f9fa;
+  border-color: #999999;
+}
+
+/* 랭킹 컨테이너 */
+.ranking-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.ranking-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.rank-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.rank-item:last-child {
+  border-bottom: none;
+}
+
+.rank-number {
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  color: #222222;
+  min-width: 20px;
+  text-align: center;
+  margin-right: 8px;
+}
+
+.rank-number.rank-up {
+  color: #5998ff;
+}
+
+.rank-text {
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  color: #222222;
+  flex: 1;
+}
+
+.rank-indicator {
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  color: #aaaaaa;
+  min-width: 20px;
+  text-align: center;
+}
+
+.rank-indicator.rank-up-arrow {
+  color: #ff0000;
+}
+
+.rank-indicator.rank-down-arrow {
+  color: #5998ff;
+}
+
+/* 카테고리 태그 섹션 */
+.category-tags-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.category-tag {
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid;
+  width: 35%;
+  text-align: center;
+}
+
+.category-tag.beauty {
+  color: #f2665e;
+  border-color: #f2665e;
+  background-color: transparent;
+}
+
+.category-tag.player {
+  color: #37b0f4;
+  border-color: #37b0f4;
+  background-color: transparent;
+}
+
+.category-tag.outlet {
+  color: #b90000;
+  border-color: #b90000;
+  background-color: transparent;
+}
+
+.category-tag.boutique {
+  color: #0000ff;
+  border-color: #0000ff;
+  background-color: transparent;
+}
+
+.category-tag.shoes {
+  color: #555d66;
+  border-color: #555d66;
+  background-color: transparent;
+}
+
+.category-tag.kids {
+  color: #ff6600;
+  border-color: #ff6600;
+  background-color: transparent;
+}
+
+.category-tag.used {
+  color: #222222;
+  border-color: #f4e04d;
+  background-color: #f4e04d;
+}
+
+.category-tag.travel {
+  color: #f5f5f5;
+  border-color: #7a8ca5;
+  background-color: #7a8ca5;
+}
+
+.category-tag.america {
+  color: #ffffff;
+  border-color: #ff0000;
+  background-color: #ff0000;
+}
+
+.category-tag.australia {
+  color: #ffffff;
+  border-color: #ff6600;
+  background-color: #ff6600;
+}
+
+.category-tag:hover {
+  opacity: 0.8;
+  transform: translateY(-1px);
+}
+
+/* 프레임 정보 패널 */
+.frame-info-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  z-index: 2000;
+  min-width: 400px;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  display: none;
+}
+
+.frame-info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+  border-radius: 12px 12px 0 0;
+}
+
+.frame-info-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+
+.close-btn:hover {
+  background: #f0f0f0;
+}
+
+.frame-info-content {
+  padding: 20px;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-item label {
+  font-weight: 500;
+  color: #666;
+  margin-right: 8px;
+}
+
+.info-item span {
+  color: #333;
+  font-weight: 600;
+}
+
+.frame-actions {
+  padding: 20px;
+  border-top: 1px solid #eee;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.action-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.refresh-btn {
+  background: #ff6b6b;
+  color: #fff;
+}
+
+.refresh-btn:hover {
+  background: #ff5252;
+}
+
+.export-btn {
+  background: #4caf50;
+  color: #fff;
+}
+
+.export-btn:hover {
+  background: #45a049;
+}
+
+/* 오버레이 */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1999;
+  display: none;
+}
+
+/* 토스트 알림 */
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 10000;
+  min-width: 300px;
+  animation: slideIn 0.3s ease;
+  display: none;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.toast-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+.toast-message {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #666;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+
+.toast-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.toast-success {
+  border-left: 4px solid #4caf50;
+}
+
+.toast-error {
+  border-left: 4px solid #f44336;
+}
+
+.toast-warning {
+  border-left: 4px solid #ff9800;
+}
+
+.toast-info {
+  border-left: 4px solid #2196f3;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 1440px) {
+  .search-page-frame {
+    width: 100%;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .search-page-frame {
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .sidebar {
+    width: 100%;
+  }
+
+  .category-tags-section {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .category-tag {
+    width: auto;
+    flex: 1;
+    min-width: 80px;
+  }
+
+  .ranking-container {
+    grid-template-columns: 1fr;
+  }
+
+  .section-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  .frame-info-panel {
+    min-width: 90%;
+    margin: 20px;
+  }
+
+  .toast {
+    left: 16px;
+    right: 16px;
+    min-width: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-page-frame {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .section-title {
+    font-size: 16px;
+  }
+
+  .search-input {
+    font-size: 12px;
+  }
+
+  .rank-text,
+  .rank-number,
+  .rank-indicator {
+    font-size: 11px;
+  }
+
+  .search-tag,
+  .brand-tag,
+  .category-tag {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+}

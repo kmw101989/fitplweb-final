@@ -1,0 +1,10 @@
+[build]
+  publish = "mainpage-website"     # ← 네가 메인으로 정한 폴더 이름
+  functions = "netlify/functions"  # 나중에 db.js 넣을 위치
+
+[functions]
+  node_bundler = "esbuild"
+
+[[functions]]
+  name = "db"
+  timeout = 26

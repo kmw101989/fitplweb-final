@@ -22,9 +22,11 @@ export const handler = async (event) => {
       time: "/time",
       guest_reco_climate: "/guest_reco_climate",
       guest_reco_activity: "/guest_reco_activity",
-      country_climate_top: "/country_climate_top",
-      country_activity_top: "/country_activity_top",
-      country_photo_top: "/country_photo_top",
+
+      // 유저 뷰 3종 (user_id 필수)
+      user_country_climate_top: "/user_country_climate_top",
+      user_country_activity_top: "/user_country_activity_top",
+      user_country_photo_top: "/user_country_photo_top",
     };
 
     const basePath = map[op];

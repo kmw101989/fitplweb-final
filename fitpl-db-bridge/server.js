@@ -114,3 +114,81 @@ app.get("/guest_reco_activity", async (_req, res) => {
     res.status(500).json({ ok: false, error: String(err.message) });
   }
 });
+
+/* ──────────────────────────────────────────────
+   [USER] 국가×기후 Top20 (뷰)
+   v_country_climate_top20_products
+   요청: /user_country_climate_top?user_id=2&limit=20
+────────────────────────────────────────────── */
+app.get("/user_country_climate_top", async (req, res) => {
+  try {
+    const user_id = Number(req.query.user_id || 0);
+    const limit = Math.min(Number(req.query.limit || 20), 100);
+    if (!user_id)
+      return res.status(400).json({ ok: false, error: "user_id required" });
+
+    const [rows] = await pool.query(
+      `SELECT *
+         FROM v_country_climate_top20_products
+        WHERE user_id = ?
+        LIMIT ?`,
+      [user_id, limit]
+    );
+    res.json({ ok: true, count: rows.length, rows });
+  } catch (err) {
+    console.error("user_country_climate_top error:", err);
+    res.status(500).json({ ok: false, error: String(err.message) });
+  }
+});
+
+/* ──────────────────────────────────────────────
+   [USER] 국가×활동 Top20 (뷰)
+   v_country_activity_top20_products
+   요청: /user_country_activity_top?user_id=2&limit=20
+────────────────────────────────────────────── */
+app.get("/user_country_activity_top", async (req, res) => {
+  try {
+    const user_id = Number(req.query.user_id || 0);
+    const limit = Math.min(Number(req.query.limit || 20), 100);
+    if (!user_id)
+      return res.status(400).json({ ok: false, error: "user_id required" });
+
+    const [rows] = await pool.query(
+      `SELECT *
+         FROM v_country_activity_top20_products
+        WHERE user_id = ?
+        LIMIT ?`,
+      [user_id, limit]
+    );
+    res.json({ ok: true, count: rows.length, rows });
+  } catch (err) {
+    console.error("user_country_activity_top error:", err);
+    res.status(500).json({ ok: false, error: String(err.message) });
+  }
+});
+
+/* ──────────────────────────────────────────────
+   [USER] 국가×사진(스냅) Top20 (뷰)
+   v_country_photo_top20_products
+   요청: /user_country_photo_top?user_id=2&limit=20
+────────────────────────────────────────────── */
+app.get("/user_country_photo_top", async (req, res) => {
+  try {
+    const user_id = Number(req.query.user_id || 0);
+    const limit = Math.min(Number(req.query.limit || 20), 100);
+    if (!user_id)
+      return res.status(400).json({ ok: false, error: "user_id required" });
+
+    const [rows] = await pool.query(
+      `SELECT *
+         FROM v_country_photo_top20_products
+        WHERE user_id = ?
+        LIMIT ?`,
+      [user_id, limit]
+    );
+    res.json({ ok: true, count: rows.length, rows });
+  } catch (err) {
+    console.error("user_country_photo_top error:", err);
+    res.status(500).json({ ok: false, error: String(err.message) });
+  }
+});

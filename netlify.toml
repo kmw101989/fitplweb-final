@@ -1,6 +1,6 @@
 # netlify.toml
 [build]
-  publish   = "."                   # 루트 전체 서빙
+  publish   = "."
   functions = "netlify/functions"
 
 [dev]
@@ -16,19 +16,18 @@
   NODE_VERSION = "20"
 
 # --- 라우팅 ---
-# 기본 진입은 fitpl-website (메인 페이지)
+# 메인 엔트리만 지정 (함수 경로는 건드리지 않음)
 [[redirects]]
   from = "/"
   to   = "/fitpl-website/index.html"
   status = 200
 
-# fitpl-website 진입
 [[redirects]]
   from = "/fitpl-website"
   to   = "/fitpl-website/index.html"
   status = 200
 
-# 정적 파일들 (CSS, JS, 이미지 등) - 404 방지
+# (선택) 정적 파일 개별 리디렉트는 없어도 되지만, 유지해도 무방
 [[redirects]]
   from = "/styles.css"
   to   = "/fitpl-website/styles.css"

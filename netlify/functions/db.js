@@ -19,6 +19,7 @@ exports.handler = async (event) => {
     const u = new URL(event.rawUrl);
     const params = u.searchParams;
     const op = params.get("op");
+    const method = event.httpMethod || "GET";
 
     const BRIDGE_URL = process.env.BRIDGE_URL;
     const BRIDGE_TOKEN = process.env.BRIDGE_TOKEN;
@@ -39,15 +40,30 @@ exports.handler = async (event) => {
     }
     qs.set("token", BRIDGE_TOKEN);
 
-    // 🔒 고정: 항상 /db 로 보냄
-    const target = `${BRIDGE_URL.replace(/\/+$/, "")}/db?${qs.toString()}`;
-    const res = await fetch(target, {
-      method: "GET",
-      headers: {
-        "x-bridge-token": BRIDGE_TOKEN, // 허용1
-        authorization: `Bearer ${BRIDGE_TOKEN}`, // 허용2
-      },
-    });
+    const baseUrl = `${BRIDGE_URL.replace(/\/+$/, "")}/db`;
+    const target = `${baseUrl}?${qs.toString()}`;
+
+    const headers = {
+      "x-bridge-token": BRIDGE_TOKEN,
+      authorization: `Bearer ${BRIDGE_TOKEN}`,
+    };
+
+    if (event.headers?.["content-type"]) {
+      headers["Content-Type"] = event.headers["content-type"];
+    } else if (event.headers?.["Content-Type"]) {
+      headers["Content-Type"] = event.headers["Content-Type"];
+    }
+
+    const fetchOptions = {
+      method,
+      headers,
+    };
+
+    if (method !== "GET" && event.body) {
+      fetchOptions.body = event.body;
+    }
+
+    const res = await fetch(target, fetchOptions);
 
     const text = await res.text();
     const contentType =

@@ -293,6 +293,104 @@ app.get("/db", async (req, res) => {
   }
 });
 
+app.post("/db", async (req, res) => {
+  try {
+    const op =
+      (typeof req.query.op === "string" && req.query.op) ||
+      (typeof req.body?.op === "string" && req.body.op) ||
+      "";
+
+    if (op !== "user_register") {
+      return res
+        .status(400)
+        .json({ ok: false, error: `bad op for POST: ${op || "unknown"}` });
+    }
+
+    const {
+      name = null,
+      email = null,
+      trip_region_id,
+      trip_start_date,
+      trip_end_date,
+      indoor_outdoor,
+      activity_tags,
+    } = req.body || {};
+
+    const regionId = Number(trip_region_id);
+    if (!Number.isFinite(regionId) || regionId <= 0) {
+      return res
+        .status(400)
+        .json({ ok: false, error: "trip_region_id must be a positive number" });
+    }
+
+    const indoorOutdoor = String(indoor_outdoor || "").toLowerCase();
+    if (!["indoor", "outdoor", "both"].includes(indoorOutdoor)) {
+      return res.status(400).json({
+        ok: false,
+        error: "indoor_outdoor must be one of indoor/outdoor/both",
+      });
+    }
+
+    const startDate = (trip_start_date || "2025-10-20").slice(0, 10);
+    const endDate = (trip_end_date || "2025-10-30").slice(0, 10);
+
+    const activityTagsArray = Array.isArray(activity_tags)
+      ? activity_tags
+          .map((tag) =>
+            typeof tag === "string" ? tag.trim().toLowerCase() : ""
+          )
+          .filter(Boolean)
+          .slice(0, 3)
+      : [];
+
+    const [maxRows] = await pool.query(
+      "SELECT COALESCE(MAX(user_id), 20) AS max_id FROM users"
+    );
+    const maxId = Number(maxRows?.[0]?.max_id || 20);
+    const nextUserId = Math.max(maxId + 1, 21);
+
+    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+
+    await pool.query(
+      `INSERT INTO users (
+        user_id, name, email, trip_region_id, trip_start_date, trip_end_date,
+        indoor_outdoor, activity_tag_1, activity_tag_2, activity_tag_3,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        nextUserId,
+        name ? String(name).trim() : null,
+        email ? String(email).trim() : null,
+        regionId,
+        startDate,
+        endDate,
+        indoorOutdoor,
+        activityTagsArray[0] || null,
+        activityTagsArray[1] || null,
+        activityTagsArray[2] || null,
+        now,
+        now,
+      ]
+    );
+
+    console.log("[user_register] success", {
+      user_id: nextUserId,
+      region_id: regionId,
+      indoor_outdoor: indoorOutdoor,
+      activity_tags: activityTagsArray,
+    });
+
+    return res.json({
+      ok: true,
+      user_id: nextUserId,
+      message: "User registered successfully",
+    });
+  } catch (err) {
+    console.error("[user_register] error:", err);
+    return res.status(500).json({ ok: false, error: String(err.message) });
+  }
+});
+
 // ── 9) 서버 시작 + 에러 핸들러
 const PORT = process.env.PORT || 4000;
 const server = app.listen(PORT, () => {

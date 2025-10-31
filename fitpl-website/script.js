@@ -574,17 +574,17 @@ function smoothScrollTo(elementId, extraOffset = 0) {
 
 // 메인 배너 슬라이드 클릭 이벤트
 document.addEventListener("DOMContentLoaded", () => {
-  const firstBannerSlide = document.querySelector(".banner-slide:first-child");
-  const secondBannerSlide = document.querySelector(
-    ".banner-slide:nth-child(2)"
-  );
-  const thirdBannerSlide = document.querySelector(".banner-slide:nth-child(3)");
+  const climateBanner = document.querySelector('[data-banner="climate"]');
+  const activityBanner = document.querySelector('[data-banner="activity"]');
+  const popularBanner = document.querySelector('[data-banner="popular"]');
 
-  if (firstBannerSlide) {
-    firstBannerSlide.style.cursor = "pointer";
-    firstBannerSlide.addEventListener("click", () => {
-      // 첫 번째 celebrity-pick으로 스크롤
-      const firstCelebrityPick = document.querySelector(".celebrity-pick");
+  // 왼쪽 배너: 기후별 추천 섹션으로 스크롤
+  if (climateBanner) {
+    climateBanner.style.cursor = "pointer";
+    climateBanner.addEventListener("click", () => {
+      const firstCelebrityPick = document.querySelector(
+        ".celebrity-pick:not(#climate-recommendation)"
+      );
       if (firstCelebrityPick) {
         firstCelebrityPick.scrollIntoView({
           behavior: "smooth",
@@ -594,22 +594,25 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  if (secondBannerSlide) {
-    secondBannerSlide.style.cursor = "pointer";
-    secondBannerSlide.addEventListener("click", () => {
-      smoothScrollTo("climate-recommendation", 150); // 150px 더 아래로 스크롤
+  // 가운데 배너: 활동별 추천 섹션으로 스크롤
+  if (activityBanner) {
+    activityBanner.style.cursor = "pointer";
+    activityBanner.addEventListener("click", () => {
+      smoothScrollTo("climate-recommendation", 150);
     });
   }
 
-  if (thirdBannerSlide) {
-    thirdBannerSlide.style.cursor = "pointer";
-    thirdBannerSlide.addEventListener("click", () => {
-      smoothScrollTo("snap-recommendation");
+  // 오른쪽 배너: 일본 페이지로 리디렉션 (나중에 구현 예정)
+  if (popularBanner) {
+    popularBanner.style.cursor = "pointer";
+    popularBanner.addEventListener("click", () => {
+      // TODO: 일본 페이지 구현 시 리디렉션 추가
+      // window.location.href = "../Nation1-1/index.html";
     });
   }
 });
 
-// products-grid 스크롤 버튼 기능 - 버튼 클릭 시 같은 형태의 products-grid 추가
+// products-grid 스크롤 버튼 기능 - 제품 섹션 간 이동
 document.addEventListener("DOMContentLoaded", () => {
   // 각 컨테이너별 인덱스 저장
   const containerIndices = new Map();
@@ -620,34 +623,35 @@ document.addEventListener("DOMContentLoaded", () => {
     const container = button.parentElement;
     const wrapper = container.querySelector(".products-grid-wrapper");
 
-    if (wrapper) {
-      // 버튼 클릭 애니메이션 효과
-      button.classList.add("clicked");
-      setTimeout(() => {
-        button.classList.remove("clicked");
-      }, 500);
+    if (!wrapper) return;
 
-      const currentSections = wrapper.querySelectorAll(".product-section");
+    // 버튼 클릭 애니메이션 효과
+    button.classList.add("clicked");
+    setTimeout(() => {
+      button.classList.remove("clicked");
+    }, 500);
 
-      // 첫 번째 클릭 시에만 새 섹션 생성
-      if (currentSections.length === 1) {
-        const newSection = createNewProductSection();
-        wrapper.appendChild(newSection);
-      }
+    const currentSections = wrapper.querySelectorAll(".product-section");
+    const currentIndex = containerIndices.get(container) || 0;
+    const maxIndex = currentSections.length - 1;
 
-      // 오른쪽으로 이동
-      containerIndices.set(container, 1);
-      wrapper.style.transform = `translateX(-100%)`;
+    // 다음 섹션으로 이동 가능한지 확인
+    if (currentIndex < maxIndex) {
+      const nextIndex = currentIndex + 1;
+      containerIndices.set(container, nextIndex);
+      wrapper.style.transform = `translateX(-${nextIndex * 100}%)`;
 
       // 왼쪽 버튼 표시
       const leftButton = container.querySelector(".scroll-left-btn");
       if (leftButton) leftButton.classList.add("show");
 
-      // 오른쪽 버튼 숨김 (두 번째 섹션에서는 제거)
-      const rightButton = container.querySelector(".scroll-right-btn");
-      if (rightButton) {
-        rightButton.style.opacity = "0";
-        rightButton.style.pointerEvents = "none";
+      // 마지막 섹션이면 오른쪽 버튼 숨김
+      if (nextIndex >= maxIndex) {
+        const rightButton = container.querySelector(".scroll-right-btn");
+        if (rightButton) {
+          rightButton.style.opacity = "0";
+          rightButton.style.pointerEvents = "none";
+        }
       }
     }
   }
@@ -658,20 +662,27 @@ document.addEventListener("DOMContentLoaded", () => {
     const container = button.parentElement;
     const wrapper = container.querySelector(".products-grid-wrapper");
 
-    if (wrapper) {
-      // 버튼 클릭 애니메이션 효과
-      button.classList.add("clicked");
-      setTimeout(() => {
-        button.classList.remove("clicked");
-      }, 500);
+    if (!wrapper) return;
 
-      // 왼쪽으로 이동
-      containerIndices.set(container, 0);
-      wrapper.style.transform = `translateX(0%)`;
+    // 버튼 클릭 애니메이션 효과
+    button.classList.add("clicked");
+    setTimeout(() => {
+      button.classList.remove("clicked");
+    }, 500);
 
-      // 왼쪽 버튼 숨김
-      const leftButton = container.querySelector(".scroll-left-btn");
-      if (leftButton) leftButton.classList.remove("show");
+    const currentIndex = containerIndices.get(container) || 0;
+
+    // 이전 섹션으로 이동
+    if (currentIndex > 0) {
+      const nextIndex = currentIndex - 1;
+      containerIndices.set(container, nextIndex);
+      wrapper.style.transform = `translateX(-${nextIndex * 100}%)`;
+
+      // 첫 번째 섹션이면 왼쪽 버튼 숨김
+      if (nextIndex === 0) {
+        const leftButton = container.querySelector(".scroll-left-btn");
+        if (leftButton) leftButton.classList.remove("show");
+      }
 
       // 오른쪽 버튼 다시 표시
       const rightButton = container.querySelector(".scroll-right-btn");
@@ -1078,8 +1089,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 페이지 진입 시 표시
-  showEntryPopup();
+  // 로컬 스토리지에 유저 정보가 없을 때만 팝업 표시
+  const hasUser = getUserFromStorage();
+  if (!hasUser) {
+    showEntryPopup();
+  }
 
   // 닫기 버튼
   if (entryPopupClose) {
@@ -1396,6 +1410,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // 제출 후 팝업 닫기
             hideEntryPopup();
+
+            // 유저 정보가 저장되었으므로 제품 다시 로드 (유저 추천으로 변경 가능)
+            setTimeout(() => {
+              loadAndRenderGuestProducts();
+            }, 500);
           } else {
             console.error("사용자 등록 실패:", result.error);
             alert(`등록 실패: ${result.error || "알 수 없는 오류"}`);
@@ -1577,3 +1596,276 @@ if (
 ) {
   console.log("💡 개발 모드: 콘솔에서 fitplTest() 실행하여 로직을 확인하세요.");
 }
+
+// ---- 제품 표시 기능 ----
+// 제품 카드 HTML 생성 함수
+function createProductCard(product) {
+  const price = Number(product.price || 0).toLocaleString();
+  const name = (product.product_name || "").replace(/\s+/g, " ").trim();
+  const brand = product.brand || "";
+  const imgUrl =
+    product.img_url ||
+    "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=260&h=312&fit=crop";
+  const discountRate = product.discount_rate
+    ? Math.round(product.discount_rate)
+    : null;
+  const productUrl = product.product_url || "#";
+
+  const discountHTML = discountRate
+    ? `<span class="discount">${discountRate}%</span>`
+    : "";
+
+  return `
+    <div class="product-card" data-product-id="${product.product_id || ""}">
+      <div class="product-image">
+        <img src="${imgUrl}" alt="${name}" loading="lazy" />
+        <button class="like-btn">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path
+              d="M10 17L8.5 15.5C3.5 10.5 0 7.5 0 5C0 2.5 2.5 0 5 0C6.5 0 8 0.5 9 1.5C10 0.5 11.5 0 13 0C15.5 0 18 2.5 18 5C18 7.5 14.5 10.5 9.5 15.5L10 17Z"
+              stroke="#666"
+              stroke-width="2"
+            />
+          </svg>
+        </button>
+      </div>
+      <div class="product-info">
+        <div class="brand">${brand}</div>
+        <div class="product-name">${name}</div>
+        <div class="price-info">
+          ${discountHTML}
+          <span class="price">${price}원</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// 제품 그리드에 제품 렌더링 (단일 섹션)
+function renderProductsToGrid(selector, products, maxProducts = 10) {
+  const grid = document.querySelector(selector);
+  if (!grid) {
+    console.warn(`그리드 요소를 찾을 수 없습니다: ${selector}`);
+    return;
+  }
+
+  if (!products || products.length === 0) {
+    console.warn("제품 데이터가 없습니다.");
+    return;
+  }
+
+  // 기존 제품 카드 제거
+  grid.innerHTML = "";
+
+  // 최대 개수만큼 제품 카드 생성
+  const productsToShow = products.slice(0, maxProducts);
+  productsToShow.forEach((product) => {
+    grid.insertAdjacentHTML("beforeend", createProductCard(product));
+  });
+
+  // 좋아요 버튼 및 클릭 이벤트 추가
+  attachProductEvents(grid);
+
+  console.log(
+    `${productsToShow.length}개 제품을 ${selector}에 렌더링했습니다.`
+  );
+}
+
+// 제품 이벤트 핸들러 추가 (공통 함수)
+function attachProductEvents(container) {
+  // 좋아요 버튼 이벤트
+  container.querySelectorAll(".like-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      btn.classList.toggle("liked");
+      const svg = btn.querySelector("svg path");
+      if (btn.classList.contains("liked")) {
+        svg.style.fill = "#f31110";
+        svg.style.stroke = "#f31110";
+      } else {
+        svg.style.fill = "none";
+        svg.style.stroke = "#666";
+      }
+    });
+  });
+
+  // 제품 카드 클릭 이벤트 (상세 페이지로 이동)
+  container.querySelectorAll(".product-card").forEach((card) => {
+    card.style.cursor = "pointer";
+    card.addEventListener("click", (e) => {
+      if (e.target.closest(".like-btn")) return;
+      const productId = card.dataset.productId;
+      if (productId) {
+        window.location.href = `../Detail/navigation.html?product_id=${productId}`;
+      } else {
+        window.location.href = "../Detail/navigation.html";
+      }
+    });
+  });
+}
+
+// 제품을 여러 섹션으로 나누어 렌더링 (스크롤 버튼용)
+function renderProductsWithSections(
+  containerSelector,
+  products,
+  itemsPerSection = 10
+) {
+  const container = document.querySelector(containerSelector);
+  if (!container) {
+    console.warn(`컨테이너를 찾을 수 없습니다: ${containerSelector}`);
+    return;
+  }
+
+  const wrapper = container.querySelector(".products-grid-wrapper");
+  if (!wrapper) {
+    console.warn("products-grid-wrapper를 찾을 수 없습니다.");
+    return;
+  }
+
+  if (!products || products.length === 0) {
+    console.warn("제품 데이터가 없습니다.");
+    return;
+  }
+
+  // 기존 섹션 제거 (첫 번째 섹션만 유지하고 내용만 교체)
+  const existingSections = wrapper.querySelectorAll(".product-section");
+
+  // 제품을 섹션별로 분할
+  const sections = [];
+  for (let i = 0; i < products.length; i += itemsPerSection) {
+    sections.push(products.slice(i, i + itemsPerSection));
+  }
+
+  // 첫 번째 섹션 업데이트
+  const firstSection = existingSections[0] || document.createElement("div");
+  if (!existingSections[0]) {
+    firstSection.className = "product-section";
+    wrapper.appendChild(firstSection);
+  }
+
+  const firstGrid =
+    firstSection.querySelector(".products-grid") ||
+    document.createElement("div");
+  if (!firstSection.querySelector(".products-grid")) {
+    firstGrid.className = "products-grid";
+    firstSection.appendChild(firstGrid);
+  }
+
+  firstGrid.innerHTML = "";
+  sections[0].forEach((product) => {
+    firstGrid.insertAdjacentHTML("beforeend", createProductCard(product));
+  });
+  attachProductEvents(firstGrid);
+
+  // 두 번째 섹션 이상이 있으면 추가 (스크롤 가능하게)
+  if (sections.length > 1) {
+    // 기존 두 번째 섹션 제거
+    for (let i = 1; i < existingSections.length; i++) {
+      existingSections[i].remove();
+    }
+
+    // 새 섹션들 추가
+    for (let i = 1; i < sections.length; i++) {
+      const section = document.createElement("div");
+      section.className = "product-section";
+
+      const grid = document.createElement("div");
+      grid.className = "products-grid";
+
+      sections[i].forEach((product) => {
+        grid.insertAdjacentHTML("beforeend", createProductCard(product));
+      });
+      attachProductEvents(grid);
+
+      section.appendChild(grid);
+      wrapper.appendChild(section);
+    }
+
+    // 오른쪽 스크롤 버튼 표시 (두 번째 섹션이 있을 때만)
+    const rightButton = container.querySelector(".scroll-right-btn");
+    if (rightButton && sections.length > 1) {
+      rightButton.style.opacity = "1";
+      rightButton.style.pointerEvents = "auto";
+    }
+  } else {
+    // 제품이 한 섹션만 있으면 오른쪽 버튼 숨김
+    const rightButton = container.querySelector(".scroll-right-btn");
+    if (rightButton) {
+      rightButton.style.opacity = "0";
+      rightButton.style.pointerEvents = "none";
+    }
+  }
+
+  console.log(
+    `${products.length}개 제품을 ${sections.length}개 섹션으로 나누어 렌더링했습니다.`
+  );
+}
+
+// 게스트 추천 제품 로드 및 표시
+async function loadAndRenderGuestProducts() {
+  const base = "/.netlify/functions/db";
+
+  try {
+    // 기후 추천과 활동 추천을 동시에 가져오기
+    const [climateRes, activityRes] = await Promise.all([
+      fetch(`${base}?op=guest_reco_climate`),
+      fetch(`${base}?op=guest_reco_activity`),
+    ]);
+
+    const climateData = await climateRes.json();
+    const activityData = await activityRes.json();
+
+    // 데이터 추출 (rows 또는 data.rows)
+    const climateProducts = climateData?.rows || climateData?.data?.rows || [];
+    const activityProducts =
+      activityData?.rows || activityData?.data?.rows || [];
+
+    // 기후 추천 섹션 렌더링 (첫 번째 .celebrity-pick)
+    const climateSection = document.querySelector(
+      ".celebrity-pick:not(#climate-recommendation)"
+    );
+    if (climateSection) {
+      const climateContainer = climateSection.querySelector(
+        ".products-grid-container"
+      );
+      if (climateContainer) {
+        renderProductsWithSections(
+          ".celebrity-pick:not(#climate-recommendation) .products-grid-container",
+          climateProducts,
+          10
+        );
+      }
+    }
+
+    // 활동 추천 섹션 렌더링 (#climate-recommendation)
+    const activitySection = document.getElementById("climate-recommendation");
+    if (activitySection) {
+      const activityContainer = activitySection.querySelector(
+        ".products-grid-container"
+      );
+      if (activityContainer) {
+        renderProductsWithSections(
+          "#climate-recommendation .products-grid-container",
+          activityProducts,
+          10
+        );
+      }
+    }
+
+    console.log("게스트 추천 제품 로드 완료:", {
+      climate: climateProducts.length,
+      activity: activityProducts.length,
+    });
+  } catch (error) {
+    console.error("제품 로드 실패:", error);
+  }
+}
+
+// 페이지 로드 시 제품 표시
+document.addEventListener("DOMContentLoaded", () => {
+  // 팝업이 닫힌 후 또는 페이지 로드 시 제품 로드
+  setTimeout(() => {
+    loadAndRenderGuestProducts();
+  }, 1000); // 팝업 표시 후 조금 지연
+});

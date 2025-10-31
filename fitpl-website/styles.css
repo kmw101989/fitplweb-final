@@ -370,6 +370,29 @@ body {
   display: flex;
   align-items: flex-end;
   padding: 24px;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* 배너별 배경 이미지 */
+.banner-slide[data-banner="climate"] {
+  background-image: url("https://image.msscdn.net/thumbnails/snap/images/2025/05/10/37476f5bdad34b8aacf4cbb4cc401c35.jpg?w=480");
+  background-size: cover;
+  background-position: center;
+}
+
+.banner-slide[data-banner="activity"] {
+  background-image: url("https://image.msscdn.net/thumbnails/snap/images/2025/04/25/194f4db0054f481a9b5d85402419a957.jpg?w=480");
+  background-size: cover;
+  background-position: center;
+}
+
+.banner-slide[data-banner="popular"] {
+  background-image: url("https://image.msscdn.net/thumbnails/snap/images/2025/10/12/e6e76b8709134147b90b6ca705d7f2ea.jpg?w=480");
+  background-size: cover;
+  background-position: center;
 }
 
 .banner-slide:first-child {
@@ -382,6 +405,17 @@ body {
 
 .banner-slide:nth-child(3) {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.banner-slide::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 1;
 }
 
 .banner-content {
@@ -426,6 +460,18 @@ body {
 .banner-text p {
   font-size: 14px;
   opacity: 0.9;
+}
+
+.banner-label {
+  font-size: 12px;
+  opacity: 0.9;
+  margin-bottom: 4px;
+}
+
+.banner-subtitle {
+  font-size: 14px;
+  opacity: 0.9;
+  margin-top: 4px;
 }
 
 /* Travel Ranking */

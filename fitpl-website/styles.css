@@ -860,16 +860,14 @@ body {
 
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(5, 281.6px);
-  grid-template-rows: repeat(2, 1fr);
+  grid-template-columns: repeat(5, minmax(220px, 1fr));
+  grid-auto-rows: auto;
   gap: 0px;
-  width: 1408px;
+  width: 100%;
+  max-width: 1408px;
   margin: 0 auto;
-  overflow-x: auto;
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
   padding: 0;
-  justify-content: start;
+  justify-items: center;
 }
 
 .products-grid::-webkit-scrollbar {
@@ -982,7 +980,8 @@ body {
 .product-card {
   background-color: #fff;
   overflow: hidden;
-  width: 281.6px;
+  width: 100%;
+  max-width: 281.6px;
   height: auto;
 }
 

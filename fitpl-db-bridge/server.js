@@ -23,7 +23,7 @@ const {
   DB_PORT = "3306",
   DB_USER,
   DB_PASSWORD,
-  DB_NAME = "fitpl", // 너의 .env 키와 맞춤 (DB_NAME 사용)
+  DB_NAME = "fitpl", // .env 키와 맞춤
   BRIDGE_TOKEN,
 } = process.env;
 
@@ -32,11 +32,11 @@ if (!DB_USER || !BRIDGE_TOKEN) {
   process.exit(1);
 }
 
-// ── 1) app을 먼저 생성 (중요!)
+// ── 1) app 생성 (중요!)
 const app = express();
 
 // ── 2) 공통 미들웨어
-app.use(cors());
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 
 // ── 3) DB 풀
@@ -46,13 +46,15 @@ const pool = mysql.createPool({
   user: DB_USER,
   password: DB_PASSWORD,
   database: DB_NAME,
-  connectionLimit: 5,
+  connectionLimit: 8,
   waitForConnections: true,
   queueLimit: 0,
+  enableKeepAlive: true,
 });
 
 // ── 4) 무인증 헬스체크 (cloudflared 확인용)
 app.get("/health", (_req, res) => {
+  res.set("Cache-Control", "no-store");
   res.json({ ok: true, msg: "bridge up" });
 });
 
@@ -95,27 +97,69 @@ app.get("/products_sample", async (_req, res) => {
   res.json({ ok: true, rows });
 });
 
-// (예시) 사용자별/게스트 추천, product_ranking 등은 그대로 유지
-// ──────────────────────────────────────────────
-// ... (네가 보낸 파일의 나머지 라우트들 그대로 아래에 둬도 됩니다)
-// ──────────────────────────────────────────────
-
-// ── 8) /db 통합 디스패처 (원본 유지 가능)
+// ── 8) /db 통합 디스패처
 app.get("/db", async (req, res) => {
   try {
     const op = String(req.query.op || "ping");
 
+    // 8-1) ping
     if (op === "ping") {
       const [r] = await pool.query("SELECT 1 AS ok");
       return res.json({ ok: true, db: r[0]?.ok === 1 });
     }
 
+    // 8-2) 진단(diag): 토큰/DB/컬럼 체크
+    if (op === "diag") {
+      const info = { ok: true, token_ok: true };
+      try {
+        const [r] = await pool.query("SELECT 1 AS ok, NOW() AS now");
+        info.db_ok = r?.[0]?.ok === 1;
+        info.db_now = r?.[0]?.now;
+      } catch (e) {
+        info.db_ok = false;
+        info.db_error = String(e?.message || e);
+      }
+      try {
+        const [cols] = await pool.query(
+          `SELECT COUNT(*) AS cnt
+           FROM INFORMATION_SCHEMA.COLUMNS
+           WHERE TABLE_SCHEMA = DATABASE()
+             AND TABLE_NAME='guest_reco_climate'
+             AND COLUMN_NAME='month'`
+        );
+        info.guest_reco_climate_has_month = (cols?.[0]?.cnt || 0) > 0;
+      } catch (e) {
+        info.guest_reco_climate_has_month = null;
+        info.cols_error = String(e?.message || e);
+      }
+      return res.json(info);
+    }
+
+    // 8-3) 테이블 목록
+    if (op === "tables") {
+      const [rows] = await pool.query(
+        "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY 1"
+      );
+      return res.json({ ok: true, count: rows.length, rows });
+    }
+
+    // 8-4) 게스트 추천(기후) — month 컬럼 존재 시에만 필터 적용
     if (op === "guest_reco_climate") {
       const region_id = req.query.region_id
         ? Number(req.query.region_id)
         : null;
-      const month = req.query.month || null; // YYYY-MM
+      const monthParam = (req.query.month || "").slice(0, 7); // YYYY-MM
       const limit = Math.min(Number(req.query.limit || 20), 100);
+
+      // month 컬럼 존재 여부 확인
+      const [cols] = await pool.query(
+        `SELECT COUNT(*) AS cnt
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME='guest_reco_climate'
+           AND COLUMN_NAME='month'`
+      );
+      const hasMonth = (cols?.[0]?.cnt || 0) > 0;
 
       let sql = `SELECT * FROM guest_reco_climate WHERE 1=1`;
       const params = [];
@@ -123,17 +167,23 @@ app.get("/db", async (req, res) => {
         sql += ` AND region_id = ?`;
         params.push(region_id);
       }
-      if (month && month.length >= 7) {
+      if (hasMonth && monthParam) {
         sql += ` AND month = ?`;
-        params.push(month.slice(0, 7));
+        params.push(monthParam);
       }
       sql += ` ORDER BY base_score DESC, src_priority ASC, product_id ASC LIMIT ?`;
       params.push(limit);
 
       const [rows] = await pool.query(sql, params);
-      return res.json({ ok: true, count: rows.length, rows });
+      return res.json({
+        ok: true,
+        count: rows.length,
+        rows,
+        month_filtered: !!(hasMonth && monthParam),
+      });
     }
 
+    // 8-5) 게스트 추천(활동)
     if (op === "guest_reco_activity") {
       const region_id = req.query.region_id
         ? Number(req.query.region_id)
@@ -158,6 +208,7 @@ app.get("/db", async (req, res) => {
       return res.json({ ok: true, count: rows.length, rows });
     }
 
+    // 8-6) 유저별 국가 Top (기후/활동/사진)
     if (op === "user_country_climate_top") {
       const user_id = Number(req.query.user_id || 0);
       const limit = Math.min(Number(req.query.limit || 20), 100);
@@ -194,6 +245,7 @@ app.get("/db", async (req, res) => {
       return res.json({ ok: true, count: rows.length, rows });
     }
 
+    // 8-7) 제품 랭킹
     if (op === "product_ranking") {
       const limit = Math.min(Number(req.query.limit || 20), 100);
       const offset = Math.max(Number(req.query.offset || 0), 0);
@@ -233,6 +285,7 @@ app.get("/db", async (req, res) => {
       return res.json({ ok: true, count: rows.length, rows });
     }
 
+    // 8-8) 알 수 없는 op
     return res.status(400).json({ ok: false, error: `bad op: ${op}` });
   } catch (err) {
     console.error("[/db] error:", err);

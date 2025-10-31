@@ -16,10 +16,10 @@
   NODE_VERSION = "20"
 
 # --- 라우팅 ---
-# 기본 진입은 mainpage-website
+# 기본 진입은 fitpl-website (메인 페이지)
 [[redirects]]
   from = "/"
-  to   = "/mainpage-website/index.html"
+  to   = "/fitpl-website/index.html"
   status = 200
 
 # fitpl-website 진입
@@ -28,5 +28,13 @@
   to   = "/fitpl-website/index.html"
   status = 200
 
-# (필요 시) 정적 파일 직접 경로도 매핑 가능
-# [[redirects]] ... (생략)
+# 정적 파일들 (CSS, JS, 이미지 등) - 404 방지
+[[redirects]]
+  from = "/styles.css"
+  to   = "/fitpl-website/styles.css"
+  status = 200
+
+[[redirects]]
+  from = "/script.js"
+  to   = "/fitpl-website/script.js"
+  status = 200

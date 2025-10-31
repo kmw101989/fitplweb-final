@@ -8,6 +8,19 @@ const json = (status, body) => ({
   body: JSON.stringify(body),
 });
 
+// 도우미: 브리지 호출
+async function fetchBridge(pathWithQuery, method = "GET", payload = null) {
+  const url = `${BRIDGE_URL}${pathWithQuery}`;
+  const headers = { Authorization: `Bearer ${BRIDGE_TOKEN}` };
+  if (payload) headers["Content-Type"] = "application/json";
+  const r = await fetch(url, {
+    method,
+    headers,
+    body: payload ? JSON.stringify(payload) : undefined,
+  });
+  return r.json();
+}
+
 export const handler = async (event) => {
   try {
     if (!BRIDGE_URL || !BRIDGE_TOKEN) {
@@ -17,6 +30,56 @@ export const handler = async (event) => {
     const u = new URL(event.rawUrl);
     const op = u.searchParams.get("op") || "ping";
 
+    // [랭킹] product_ranking 조회
+    if (op === "product_ranking") {
+      const qs = new URLSearchParams();
+      for (const k of [
+        "limit",
+        "offset",
+        "order",
+        "main_category",
+        "gender_en",
+      ]) {
+        const v = u.searchParams.get(k);
+        if (v) qs.set(k, v);
+      }
+      const data = await fetchBridge(`/product_ranking?${qs.toString()}`);
+      return json(200, data);
+    }
+
+    // [세일] 할인순
+    if (op === "product_sale") {
+      const qs = new URLSearchParams();
+      for (const k of [
+        "limit",
+        "offset",
+        "min_discount",
+        "main_category",
+        "gender_en",
+      ]) {
+        const v = u.searchParams.get(k);
+        if (v) qs.set(k, v);
+      }
+      const data = await fetchBridge(`/product_sale?${qs.toString()}`);
+      return json(200, data);
+    }
+
+    // [사용자 등록] POST 요청 처리
+    if (op === "user_register") {
+      if (event.httpMethod !== "POST") {
+        return json(405, { ok: false, error: "Method not allowed" });
+      }
+      let payload;
+      try {
+        payload = JSON.parse(event.body || "{}");
+      } catch (e) {
+        return json(400, { ok: false, error: "Invalid JSON" });
+      }
+      const data = await fetchBridge("/user_register", "POST", payload);
+      return json(data.ok ? 200 : 500, data);
+    }
+
+    // 간단한 map 기반 라우팅
     const map = {
       ping: "/ping",
       time: "/time",
@@ -30,7 +93,9 @@ export const handler = async (event) => {
     };
 
     const basePath = map[op];
-    if (!basePath) return json(400, { ok: false, error: "bad op" });
+    if (!basePath) {
+      return json(400, { ok: false, error: "bad op" });
+    }
 
     const qs = u.search || "";
     const url = `${BRIDGE_URL}${basePath}${qs}`;

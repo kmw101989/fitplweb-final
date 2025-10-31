@@ -81,7 +81,7 @@ locationTags.forEach((tag) => {
 function navigateToLocation(location) {
   const locationMap = {
     fukuoka: "../Detailpage/index.html",
-    tokyo: "../Tokyo/index.html",
+    tokyo: "../Nation1-2/index.html",
     osaka: "../Osaka/index.html",
   };
 

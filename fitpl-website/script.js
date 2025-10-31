@@ -181,6 +181,26 @@ if (logoutBtn) {
 // 국가 필터 기능
 filterBtns.forEach((btn) => {
   btn.addEventListener("click", () => {
+    // 특정 국가 버튼 클릭 시 해당 NationX-1 페이지로 이동
+    const label = btn.textContent.trim();
+    const countryRoutes = {
+      베트남: "../Nation1-1/index.html",
+      중국: "../Nation2-1/index.html",
+      홍콩: "../Nation3-1/index.html",
+      대만: "../Nation4-1/index.html",
+      태국: "../Nation5-1/index.html",
+      라오스: "../Nation6-1/index.html",
+      싱가포르: "../Nation7-1/index.html",
+      미국: "../Nation8-1/index.html",
+      호주: "../Nation9-1/index.html",
+      뉴질랜드: "../Nation10-1/index.html",
+      프랑스: "../Nation11-1/index.html",
+    };
+    if (countryRoutes[label]) {
+      window.location.href = countryRoutes[label];
+      return;
+    }
+
     // 모든 버튼에서 active 클래스 제거
     filterBtns.forEach((b) => b.classList.remove("active"));
     // 클릭된 버튼에 active 클래스 추가
@@ -1010,108 +1030,550 @@ window.addEventListener("load", () => {
   });
 });
 
-// ---- 유틸 ----
-async function get(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
-}
-const rowsOf = (p) => p?.rows || p?.data?.rows || [];
+// 진입 팝업 표시/닫기
+document.addEventListener("DOMContentLoaded", () => {
+  const entryPopup = document.getElementById("entryPopup");
+  const entryPopupClose = document.getElementById("entryPopupClose");
+  const appContainer = document.querySelector(".container");
+  const countryList = document.getElementById("countryList");
+  const prefCategoryList = document.getElementById("prefCategoryList");
+  const activityList = document.getElementById("activityList");
+  const cityList = document.getElementById("cityList");
+  const chipsCountry = document.getElementById("countryChips");
+  const chipsCity = document.getElementById("cityChips");
+  const chipsPref = document.getElementById("prefCatChips");
+  const chipsActivity = document.getElementById("activityChips");
+  const entryForm = document.getElementById("entryForm");
+  const countryError = document.getElementById("countryError");
+  const prefCatError = document.getElementById("prefCatError");
+  const activityError = document.getElementById("activityError");
 
-// ---- 스타일 주입 (CSS 파일 건드리지 않음) ----
-(function injectStyle() {
-  const css = `
-  .fitpl-guest { max-width: 1200px; margin: 24px auto; padding: 0 16px; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif; }
-  .fitpl-guest h2 { margin: 16px 0 12px; font-size: 20px; }
-  .fitpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
-  .fitpl-card { border: 1px solid #eee; border-radius: 12px; padding: 10px; background:#fff; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
-  .fitpl-card img { width: 100%; height: 170px; object-fit: cover; border-radius: 10px; }
-  .fitpl-brand { margin-top: 8px; font-size: 12px; color:#555; }
-  .fitpl-name { margin-top: 4px; font-size: 13px; line-height: 1.3; height: 34px; overflow: hidden; }
-  .fitpl-price { margin-top: 6px; font-weight: 700; }
-  `;
-  const style = document.createElement("style");
-  style.textContent = css;
-  document.head.appendChild(style);
-})();
+  if (!entryPopup) return;
 
-// ---- 컨테이너 생성 (HTML 수정 없이 동적 삽입) ----
-function ensureContainers() {
-  let root = document.querySelector("#fitpl-guest-root");
-  if (!root) {
-    root = document.createElement("section");
-    root.id = "fitpl-guest-root";
-    root.className = "fitpl-guest";
-    // 페이지 최상단에 삽입 (필요시 위치 바꾸려면 여기만 수정)
-    document.body.prepend(root);
+  function showEntryPopup() {
+    entryPopup.classList.add("show");
+    document.body.style.overflow = "hidden";
+    document.body.classList.add("popup-open");
+    // 본문 상호작용 비활성화
+    if (appContainer) {
+      appContainer.classList.add("non-interactive");
+      appContainer.setAttribute("aria-hidden", "true");
+      try {
+        appContainer.setAttribute("inert", "");
+      } catch (_) {}
+    }
+    // 포커스 트랩 시작(닫기 버튼으로 포커스 이동)
+    if (entryPopupClose) entryPopupClose.focus();
   }
-  if (!document.querySelector("#guestClimate")) {
-    root.insertAdjacentHTML(
-      "beforeend",
-      `
-      <div id="guestClimateWrap">
-        <h2>기후 기반 추천</h2>
-        <div id="guestClimate" class="fitpl-grid"></div>
-      </div>
-    `
+
+  function hideEntryPopup() {
+    entryPopup.classList.remove("show");
+    document.body.style.overflow = "auto";
+    document.body.classList.remove("popup-open");
+    // 본문 상호작용 복원
+    if (appContainer) {
+      appContainer.classList.remove("non-interactive");
+      appContainer.removeAttribute("aria-hidden");
+      appContainer.removeAttribute("inert");
+    }
+  }
+
+  // 페이지 진입 시 표시
+  showEntryPopup();
+
+  // 닫기 버튼
+  if (entryPopupClose) {
+    entryPopupClose.addEventListener("click", hideEntryPopup);
+  }
+
+  // 오버레이 클릭 시 닫기 (내용 영역 클릭 제외)
+  entryPopup.addEventListener("click", (e) => {
+    if (e.target === entryPopup) hideEntryPopup();
+  });
+
+  // ESC 키로 닫기
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && entryPopup.classList.contains("show")) {
+      hideEntryPopup();
+    }
+  });
+
+  // 포커스 트랩: 팝업 내부에서만 탭 이동
+  document.addEventListener("keydown", (e) => {
+    if (!entryPopup.classList.contains("show")) return;
+    if (e.key !== "Tab") return;
+    const focusables = entryPopup.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     );
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
+
+  // 국가 라디오 변경 시 에러 지우기
+  if (countryList) {
+    countryList.addEventListener("change", () => {
+      if (countryError) countryError.textContent = "";
+      const selected = document.querySelector('input[name="country"]:checked');
+      renderChips(chipsCountry, selected ? [selected.value] : [], (value) => {
+        const input = countryList.querySelector(`input[value="${value}"]`);
+        if (input) input.checked = false;
+        renderChips(chipsCountry, [], null);
+      });
+      collapseField(countryList.closest(".form-field"));
+    });
   }
-  if (!document.querySelector("#guestActivity")) {
-    root.insertAdjacentHTML(
-      "beforeend",
-      `
-      <div id="guestActivityWrap" style="margin-top:20px">
-        <h2>활동 기반 추천</h2>
-        <div id="guestActivity" class="fitpl-grid"></div>
-      </div>
-    `
-    );
-  }
-}
 
-function card(r) {
-  const price = Number(r.price || 0).toLocaleString();
-  const name = (r.product_name || "").replace(/\s+/g, " ").trim();
-  const brand = r.brand || "";
-  return `
-    <a class="fitpl-card" href="${
-      r.product_url || "#"
-    }" target="_blank" rel="noopener">
-      <img src="${r.img_url || ""}" alt="${name}">
-      <div class="fitpl-brand">${brand}</div>
-      <div class="fitpl-name">${name}</div>
-      <div class="fitpl-price">${price}원</div>
-    </a>
-  `;
-}
-
-function renderList(selector, rows) {
-  const el = document.querySelector(selector);
-  if (!el) return;
-  el.innerHTML = (rows || []).slice(0, 20).map(card).join("");
-}
-
-async function loadGuestReco() {
-  ensureContainers();
-  const base = "/.netlify/functions/db";
-  try {
-    const [climate, activity] = await Promise.all([
-      get(`${base}?op=guest_reco_climate`),
-      get(`${base}?op=guest_reco_activity`),
-    ]);
-    renderList("#guestClimate", rowsOf(climate));
-    renderList("#guestActivity", rowsOf(activity));
-  } catch (e) {
-    console.error("게스트 추천 로딩 실패:", e);
-    // 최소한의 오류 메시지 표시
-    ensureContainers();
-    const wrap = document.querySelector("#fitpl-guest-root");
-    wrap &&
-      wrap.insertAdjacentHTML(
-        "beforeend",
-        `<p style="color:#c00">추천을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</p>`
+  // 대분류 체크 변경 시 에러 지우기
+  if (prefCategoryList) {
+    prefCategoryList.addEventListener("change", () => {
+      if (prefCatError) prefCatError.textContent = "";
+      const checked = prefCategoryList.querySelectorAll(
+        'input[name="prefCat"]:checked'
       );
+      renderChips(
+        chipsPref,
+        Array.from(checked).map((c) => c.value),
+        (value) => {
+          const input = prefCategoryList.querySelector(
+            `input[value="${value}"]`
+          );
+          if (input) input.checked = false;
+          const rest = prefCategoryList.querySelectorAll(
+            'input[name="prefCat"]:checked'
+          );
+          renderChips(
+            chipsPref,
+            Array.from(rest).map((c) => c.value),
+            null
+          );
+        }
+      );
+      collapseField(prefCategoryList.closest(".form-field"));
+    });
+  }
+
+  // 도시 라디오 변경 시
+  if (cityList) {
+    cityList.addEventListener("change", () => {
+      const selected = document.querySelector('input[name="city"]:checked');
+      renderChips(chipsCity, selected ? [selected.value] : [], (value) => {
+        const input = cityList.querySelector(`input[value="${value}"]`);
+        if (input) input.checked = false;
+        renderChips(chipsCity, [], null);
+      });
+      collapseField(cityList.closest(".form-field"));
+    });
+  }
+
+  // 활동 체크박스 최대 3개 제한
+  if (activityList) {
+    activityList.addEventListener("change", (e) => {
+      const checkboxes = activityList.querySelectorAll(
+        'input[name="activity"]'
+      );
+      const checked = Array.from(checkboxes).filter((c) => c.checked);
+      if (checked.length > 3) {
+        const target = e.target;
+        if (target && target.checked) {
+          target.checked = false;
+        }
+        if (activityError)
+          activityError.textContent = "최대 3개까지 선택 가능합니다.";
+      } else {
+        if (activityError) activityError.textContent = "";
+        renderChips(
+          chipsActivity,
+          checked.map((c) => c.value),
+          (value) => {
+            const input = activityList.querySelector(`input[value="${value}"]`);
+            if (input) input.checked = false;
+            const rest = activityList.querySelectorAll(
+              'input[name="activity"]:checked'
+            );
+            renderChips(
+              chipsActivity,
+              Array.from(rest).map((c) => c.value),
+              null
+            );
+          }
+        );
+        if (checked.length === 3) {
+          collapseField(activityList.closest(".form-field"));
+          if (activityError) {
+            activityError.textContent = "최대 3개 선택 완료";
+            setTimeout(() => {
+              activityError.textContent = "";
+            }, 1500);
+          }
+        }
+      }
+    });
+  }
+
+  // 제출 검증
+  if (entryForm) {
+    entryForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      // 국가 선택 확인
+      const selectedCountry = document.querySelector(
+        'input[name="country"]:checked'
+      );
+      if (!selectedCountry) {
+        if (countryError)
+          countryError.textContent = "여행지역을 1개 선택해 주세요.";
+        return;
+      }
+
+      // 대분류 선택 확인
+      const selectedPrefCats = document.querySelectorAll(
+        'input[name="prefCat"]:checked'
+      );
+      if (!selectedPrefCats.length) {
+        if (prefCatError)
+          prefCatError.textContent =
+            "선호 대분류 활동을 최소 1개 선택해 주세요.";
+        return;
+      }
+
+      // 활동 최대 3개 확인(선택은 비필수)
+      const selectedActivities = document.querySelectorAll(
+        'input[name="activity"]:checked'
+      );
+      if (selectedActivities.length > 3) {
+        if (activityError)
+          activityError.textContent = "최대 3개까지 선택 가능합니다.";
+        return;
+      }
+
+      // 도시 선택 확인 (필수)
+      const selectedCity = document.querySelector('input[name="city"]:checked');
+      if (!selectedCity) {
+        // 도시 필드로 스크롤하고 경고
+        const cityField = cityList?.closest(".form-field");
+        if (cityField) {
+          cityField.classList.remove("collapsed");
+          cityField.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        alert("도시를 선택해 주세요.");
+        return;
+      }
+
+      // 매핑 함수들
+      const cityToRegionId = {
+        도쿄: 1,
+        오사카: 2,
+        상하이: 3,
+        광저우: 4,
+        가오슝: 5,
+        타이베이: 6,
+        방콕: 7,
+        치앙마이: 8,
+        다낭: 9,
+        하노이: 10,
+        마닐라: 11,
+        세부: 12,
+        홍콩: 13,
+        마카오: 14,
+        발리: 15,
+        자카르타: 16,
+        괌: 17,
+        하와이: 18,
+        싱가포르: 19,
+        시드니: 20,
+      };
+
+      const prefCatToIndoorOutdoor = {
+        인도어: "indoor",
+        아웃도어: "outdoor",
+        둘다: "both",
+      };
+
+      const activityToTag = {
+        도시: "urban",
+        쇼핑: "shopping",
+        음식: "food",
+        레스토랑: "restaurant",
+        미식: "gourmet",
+        서핑: "surfing",
+        스노클링: "snorkeling",
+        다이빙: "diving",
+        박물관: "museum",
+        아트: "art",
+        하이킹: "hiking",
+        트레킹: "trekking",
+        테마파크: "themepark",
+        놀이공원: "amusement",
+        "실내 야외 전망대": "observationdeck",
+        마켓나이트: "marketnight",
+        동물원: "zoo",
+        대성당: "cathedral",
+        교회: "church",
+        사원수: "templeshrine",
+        국립공원: "nationalpark",
+        수족관: "aquarium",
+        해변: "beach",
+      };
+
+      // 데이터 변환
+      const cityName = selectedCity.value;
+      const tripRegionId = cityToRegionId[cityName];
+      if (!tripRegionId) {
+        alert(`도시 매핑 오류: ${cityName}`);
+        return;
+      }
+
+      // 대분류 변환 (첫 번째 선택된 것을 사용)
+      const prefCatValue = selectedPrefCats[0]?.value || "";
+      const indoorOutdoor = prefCatToIndoorOutdoor[prefCatValue];
+      if (!indoorOutdoor) {
+        alert("선호 활동 대분류 매핑 오류");
+        return;
+      }
+
+      // 소분류 변환 (영문 키 배열)
+      const activityTags = Array.from(selectedActivities)
+        .map((el) => activityToTag[el.value])
+        .filter(Boolean); // null/undefined 제거
+
+      // 날짜 처리 (비어있으면 기본값)
+      const startDate =
+        document.getElementById("startDate")?.value || "2025-10-20";
+      const endDate = document.getElementById("endDate")?.value || "2025-10-30";
+
+      // 서버 전송용 데이터 준비
+      const submitData = {
+        name: document.getElementById("entryName")?.value?.trim() || null,
+        email: document.getElementById("entryEmail")?.value?.trim() || null,
+        trip_region_id: tripRegionId,
+        trip_start_date: startDate,
+        trip_end_date: endDate,
+        indoor_outdoor: indoorOutdoor,
+        activity_tags: activityTags.length > 0 ? activityTags : null,
+      };
+
+      console.log("진입 폼 제출 (변환됨):", submitData);
+
+      // 서버로 전송
+      async function submitUserData() {
+        try {
+          const response = await fetch(
+            "/.netlify/functions/db?op=user_register",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(submitData),
+            }
+          );
+
+          const result = await response.json();
+
+          if (result.ok) {
+            console.log("사용자 등록 성공:", result);
+
+            // 로컬 스토리지에 유저 정보 저장
+            const userData = {
+              user_id: result.user_id,
+              trip_region_id: submitData.trip_region_id,
+              name: submitData.name,
+              email: submitData.email,
+              indoor_outdoor: submitData.indoor_outdoor,
+              activity_tags: submitData.activity_tags,
+              registered_at: new Date().toISOString(),
+            };
+            localStorage.setItem("fitpl_user", JSON.stringify(userData));
+            console.log("로컬 스토리지에 저장됨:", userData);
+
+            // 제출 후 팝업 닫기
+            hideEntryPopup();
+          } else {
+            console.error("사용자 등록 실패:", result.error);
+            alert(`등록 실패: ${result.error || "알 수 없는 오류"}`);
+          }
+        } catch (error) {
+          console.error("전송 오류:", error);
+          alert(`전송 오류: ${error.message}`);
+        }
+      }
+
+      submitUserData();
+    });
+  }
+
+  // 토글 화살표: 리스트 펼치기/접기
+  const toggleButtons = document.querySelectorAll(".entry-popup .toggle-btn");
+  toggleButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const field = btn.closest(".form-field");
+      if (!field) return;
+      const isCollapsed = field.classList.toggle("collapsed");
+      btn.setAttribute("aria-expanded", String(!isCollapsed));
+    });
+  });
+
+  function renderChips(container, values, onRemove) {
+    if (!container) return;
+    container.innerHTML = "";
+    values.forEach((val) => {
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      const text = document.createElement("span");
+      text.textContent = val;
+      chip.appendChild(text);
+      if (onRemove) {
+        const closeBtn = document.createElement("button");
+        closeBtn.type = "button";
+        closeBtn.setAttribute("aria-label", `${val} 제거`);
+        closeBtn.textContent = "×";
+        closeBtn.addEventListener("click", () => onRemove(val));
+        chip.appendChild(closeBtn);
+      }
+      container.appendChild(chip);
+    });
+  }
+
+  function collapseField(field) {
+    if (!field) return;
+    field.classList.add("collapsed");
+    const btn = field.querySelector(".toggle-btn");
+    if (btn) btn.setAttribute("aria-expanded", "false");
+  }
+});
+
+// ---- 유저 ID 관리 유틸리티 ----
+// 로컬 스토리지에서 유저 정보 가져오기
+function getUserFromStorage() {
+  try {
+    const stored = localStorage.getItem("fitpl_user");
+    return stored ? JSON.parse(stored) : null;
+  } catch (e) {
+    console.error("로컬 스토리지 파싱 오류:", e);
+    return null;
   }
 }
 
-document.addEventListener("DOMContentLoaded", loadGuestReco);
+// 현재 페이지의 지역 ID를 파악하는 함수
+// URL 경로나 페이지 특성에 따라 지역 ID 반환
+function getCurrentPageRegionId() {
+  // URL에서 추출 시도 (예: /Nation1-1/index.html → region_id 1)
+  const path = window.location.pathname;
+  const regionMatch = path.match(/Nation(\d+)/);
+  if (regionMatch) {
+    return parseInt(regionMatch[1]);
+  }
+
+  // 쿼리 파라미터에서 추출 시도
+  const params = new URLSearchParams(window.location.search);
+  const regionId = params.get("region_id");
+  if (regionId) {
+    return parseInt(regionId);
+  }
+
+  // 데이터 속성에서 추출 시도
+  const pageElement = document.querySelector("[data-region-id]");
+  if (pageElement) {
+    return parseInt(pageElement.dataset.regionId);
+  }
+
+  return null;
+}
+
+// 유저 ID 결정 함수: 유저의 trip_region_id와 현재 페이지 지역 ID 비교
+// 일치하면 유저 ID, 불일치하면 게스트 ID 반환
+function determineUserId(currentPageRegionId) {
+  const user = getUserFromStorage();
+
+  // 유저 정보가 없거나 페이지 지역 ID가 없으면 게스트
+  if (!user || !currentPageRegionId) {
+    return currentPageRegionId || null; // 게스트는 region_id = user_id
+  }
+
+  // 유저의 trip_region_id와 현재 페이지 지역 ID 비교
+  if (user.trip_region_id === currentPageRegionId) {
+    // 일치: 유저 ID 사용
+    return user.user_id;
+  } else {
+    // 불일치: 해당 지역의 게스트 ID 사용 (region_id = user_id)
+    return currentPageRegionId;
+  }
+}
+
+// 전역으로 노출 (다른 페이지에서도 사용 가능하도록)
+window.fitplUserUtils = {
+  getUserFromStorage,
+  getCurrentPageRegionId,
+  determineUserId,
+};
+
+// ---- 개발/테스트용 함수 (콘솔에서 확인용) ----
+// 브라우저 콘솔에서 fitplTest() 실행하여 테스트
+window.fitplTest = function () {
+  console.log("=== FitPl 로직 테스트 ===");
+
+  // 1. 로컬 스토리지 확인
+  const user = getUserFromStorage();
+  console.log("1. 로컬 스토리지 유저 정보:", user);
+
+  // 2. 현재 페이지 지역 ID 확인
+  const pageRegionId = getCurrentPageRegionId();
+  console.log("2. 현재 페이지 지역 ID:", pageRegionId);
+
+  // 3. 유저 ID 결정
+  const userId = determineUserId(pageRegionId);
+  console.log("3. 결정된 유저 ID:", userId);
+  console.log("   - 유저 정보 있음:", !!user);
+  console.log("   - 유저 trip_region_id:", user?.trip_region_id);
+  console.log("   - 페이지 region_id:", pageRegionId);
+  console.log("   - 일치 여부:", user?.trip_region_id === pageRegionId);
+
+  // 4. 테스트 시나리오
+  console.log("\n=== 테스트 시나리오 ===");
+  if (user) {
+    console.log("시나리오 A: 같은 지역 방문");
+    console.log("  유저 trip_region_id:", user.trip_region_id);
+    console.log("  페이지 region_id:", user.trip_region_id);
+    console.log(
+      "  → 사용될 ID:",
+      determineUserId(user.trip_region_id),
+      "(유저 ID)"
+    );
+
+    console.log("\n시나리오 B: 다른 지역 방문");
+    const otherRegion = user.trip_region_id === 1 ? 4 : 1;
+    console.log("  유저 trip_region_id:", user.trip_region_id);
+    console.log("  페이지 region_id:", otherRegion);
+    console.log("  → 사용될 ID:", determineUserId(otherRegion), "(게스트 ID)");
+  } else {
+    console.log("유저 정보가 없습니다. 폼을 제출하여 유저 정보를 저장하세요.");
+  }
+
+  return {
+    user,
+    pageRegionId,
+    userId,
+    scenarios: user
+      ? {
+          sameRegion: determineUserId(user.trip_region_id),
+          differentRegion: determineUserId(user.trip_region_id === 1 ? 4 : 1),
+        }
+      : null,
+  };
+};
+
+// 개발 모드에서 자동 테스트 (선택사항)
+if (
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1"
+) {
+  console.log("💡 개발 모드: 콘솔에서 fitplTest() 실행하여 로직을 확인하세요.");
+}

@@ -192,3 +192,209 @@ app.get("/user_country_photo_top", async (req, res) => {
     res.status(500).json({ ok: false, error: String(err.message) });
   }
 });
+/* ──────────────────────────────────────────────
+   [RANKING] product_ranking 테이블 조회
+   GET /product_ranking?limit=20&offset=0&order=monthly_views_desc
+      &main_category=top&gender_en=public
+   order 허용값:
+     - rank_asc            (rank/순위 컬럼 있을 때)
+     - base_score_desc
+     - monthly_views_desc  (기본값)
+     - sales_desc
+     - rating_desc
+     - review_count_desc
+────────────────────────────────────────────── */
+app.get("/product_ranking", async (req, res) => {
+  try {
+    const limit = Math.min(Number(req.query.limit || 20), 100);
+    const offset = Math.max(Number(req.query.offset || 0), 0);
+    const order = String(req.query.order || "monthly_views_desc");
+
+    const allowed = {
+      rank_asc: "rank_index ASC", // 테이블에 있으면 사용
+      base_score_desc: "base_score DESC",
+      monthly_views_desc: "monthly_views DESC",
+      sales_desc: "sales DESC",
+      rating_desc: "rating DESC",
+      review_count_desc: "review_count DESC",
+    };
+    const orderBy = allowed[order] || allowed.monthly_views_desc;
+
+    const where = [];
+    const params = [];
+
+    if (req.query.main_category) {
+      where.push("main_category = ?");
+      params.push(String(req.query.main_category));
+    }
+    if (req.query.gender_en) {
+      where.push("gender_en = ?");
+      params.push(String(req.query.gender_en));
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+    const sql = `
+      SELECT *
+      FROM product_ranking
+      ${whereSql}
+      ORDER BY ${orderBy}, product_id ASC
+      LIMIT ? OFFSET ?
+    `;
+    params.push(limit, offset);
+
+    const [rows] = await pool.query(sql, params);
+    res.json({ ok: true, count: rows.length, rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: String(err.message) });
+  }
+});
+
+/* ──────────────────────────────────────────────
+   [SALE] 세일 탭: product_ranking에서 할인 높은 순
+   GET /product_sale?limit=20&offset=0&min_discount=10
+      &main_category=top&gender_en=public
+────────────────────────────────────────────── */
+app.get("/product_sale", async (req, res) => {
+  try {
+    const limit = Math.min(Number(req.query.limit || 20), 100);
+    const offset = Math.max(Number(req.query.offset || 0), 0);
+    const minDiscount = Math.max(Number(req.query.min_discount || 0), 0);
+
+    const where = ["discount_rate IS NOT NULL"];
+    const params = [];
+
+    if (minDiscount > 0) {
+      where.push("discount_rate >= ?");
+      params.push(minDiscount);
+    }
+    if (req.query.main_category) {
+      where.push("main_category = ?");
+      params.push(String(req.query.main_category));
+    }
+    if (req.query.gender_en) {
+      where.push("gender_en = ?");
+      params.push(String(req.query.gender_en));
+    }
+
+    const whereSql = `WHERE ${where.join(" AND ")}`;
+    const sql = `
+      SELECT *
+      FROM product_ranking
+      ${whereSql}
+      ORDER BY discount_rate DESC, monthly_views DESC, product_id ASC
+      LIMIT ? OFFSET ?
+    `;
+    params.push(limit, offset);
+
+    const [rows] = await pool.query(sql, params);
+    res.json({ ok: true, count: rows.length, rows });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: String(err.message) });
+  }
+});
+
+/* ──────────────────────────────────────────────
+   [USER REGISTRATION] 사용자 정보 등록
+   POST /user_register
+   Body: {
+     name?: string,
+     email?: string,
+     trip_region_id: number,
+     trip_start_date?: string (YYYY-MM-DD),
+     trip_end_date?: string (YYYY-MM-DD),
+     indoor_outdoor: 'indoor' | 'outdoor' | 'both',
+     activity_tags?: string[] (영문 키 배열)
+   }
+────────────────────────────────────────────── */
+app.post("/user_register", async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      trip_region_id,
+      trip_start_date,
+      trip_end_date,
+      indoor_outdoor,
+      activity_tags,
+    } = req.body;
+
+    // 필수 필드 검증
+    if (!trip_region_id || !indoor_outdoor) {
+      return res.status(400).json({
+        ok: false,
+        error: "trip_region_id and indoor_outdoor are required",
+      });
+    }
+
+    // indoor_outdoor 값 검증
+    if (!["indoor", "outdoor", "both"].includes(indoor_outdoor)) {
+      return res.status(400).json({
+        ok: false,
+        error: "indoor_outdoor must be 'indoor', 'outdoor', or 'both'",
+      });
+    }
+
+    // 날짜 기본값 설정
+    const startDate = trip_start_date || "2025-10-20";
+    const endDate = trip_end_date || "2025-10-30";
+
+    // activity_tags를 3개 컬럼으로 분리 (최대 3개)
+    const activityTagsArray = Array.isArray(activity_tags)
+      ? activity_tags.slice(0, 3)
+      : [];
+    const activityTag1 = activityTagsArray[0] || null;
+    const activityTag2 = activityTagsArray[1] || null;
+    const activityTag3 = activityTagsArray[2] || null;
+
+    // user_id 자동 생성: 현재 최대값 확인 후 +1 (최소 21)
+    // AUTO_INCREMENT가 없으므로 수동으로 생성
+    const [maxUser] = await pool.query(
+      "SELECT COALESCE(MAX(user_id), 20) AS max_id FROM users"
+    );
+    const nextUserId = Math.max((maxUser[0]?.max_id || 20) + 1, 21);
+
+    // 현재 시간 (created_at, updated_at용)
+    const now = new Date().toISOString().slice(0, 19).replace("T", " ");
+
+    // INSERT 쿼리 실행
+    const [result] = await pool.query(
+      `INSERT INTO users (
+        user_id,
+        name,
+        email,
+        trip_region_id,
+        trip_start_date,
+        trip_end_date,
+        indoor_outdoor,
+        activity_tag_1,
+        activity_tag_2,
+        activity_tag_3,
+        created_at,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        nextUserId,
+        name || null,
+        email || null,
+        trip_region_id,
+        startDate,
+        endDate,
+        indoor_outdoor,
+        activityTag1,
+        activityTag2,
+        activityTag3,
+        now,
+        now,
+      ]
+    );
+
+    res.json({
+      ok: true,
+      user_id: nextUserId,
+      message: "User registered successfully",
+    });
+  } catch (err) {
+    console.error("user_register error:", err);
+    res.status(500).json({ ok: false, error: String(err.message) });
+  }
+});

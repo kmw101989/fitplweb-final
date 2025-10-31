@@ -1739,3 +1739,313 @@ body {
   border-color: #111 !important;
   color: #fff !important;
 }
+
+/* 진입 팝업 */
+.entry-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  opacity: 0;
+  transition: none;
+}
+
+.entry-popup-overlay.show {
+  display: flex;
+  opacity: 1 !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Hover 시 반투명해지는 효과 방지 */
+.entry-popup-overlay:hover {
+  opacity: 1 !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
+}
+
+.entry-popup:hover {
+  opacity: 1 !important;
+  background: #fff;
+}
+.entry-popup-overlay,
+.entry-popup,
+.entry-popup-overlay * {
+  opacity: 1 !important;
+}
+
+/* 오버레이 내부 요소 hover 시에도 투명도 변화/트랜지션 제거 */
+.entry-popup-overlay *,
+.entry-popup * {
+  transition: none !important;
+}
+
+.entry-popup-overlay *:hover,
+.entry-popup *:hover {
+  opacity: 1 !important;
+}
+
+/* 팝업 오픈 중에는 전역 hover로 인한 투명도/필터 변화 차단 */
+body.popup-open *,
+body.popup-open *:before,
+body.popup-open *:after {
+  opacity: 1 !important;
+  filter: none !important;
+  transition: none !important;
+}
+
+/* 팝업 오픈 시 본문 비활성화 */
+.non-interactive {
+  pointer-events: none;
+  user-select: none;
+}
+
+.entry-popup {
+  width: 520px;
+  max-width: calc(100% - 40px);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  position: relative;
+  padding: 28px 24px;
+  transform: translateY(12px);
+  transition: none;
+}
+
+.entry-popup-overlay.show .entry-popup {
+  transform: translateY(0);
+}
+
+.entry-popup-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: #f5f5f5;
+  color: #333;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 36px;
+  text-align: center;
+}
+
+.entry-popup-close:hover {
+  background: #ededed;
+}
+
+.entry-popup-content h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #000;
+}
+
+.entry-popup-content p {
+  font-size: 14px;
+  color: #333;
+}
+
+/* 폼 스타일 */
+.entry-form {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111;
+  margin-bottom: 6px;
+}
+
+.form-field input[type="text"],
+.form-field input[type="email"],
+.form-field input[type="date"] {
+  width: 100%;
+  height: 40px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-size: 14px;
+  color: #333;
+  background: #fff;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  color: #333;
+  padding: 8px 12px;
+  border-radius: 18px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tag.selected {
+  background-color: #111;
+  border-color: #111;
+  color: #fff;
+}
+
+.helper {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #666;
+}
+
+.selected-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 4px 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 14px;
+  font-size: 12px;
+  color: #333;
+  cursor: default;
+}
+
+.chip button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: #666;
+  padding: 0;
+}
+
+.error-message {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #f31110;
+  min-height: 16px;
+}
+
+.form-actions {
+  margin-top: 4px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.submit-btn {
+  height: 40px;
+  padding: 0 16px;
+  background: #111;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.submit-btn:hover {
+  background: #1a1a1a;
+}
+
+@media (max-width: 520px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 토글 화살표 헤더 */
+.field-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* 토글 패널이 열려도 팝업 높이가 늘어나지 않도록, 목록을 부유 패널로 표시 */
+.form-field {
+  position: relative;
+}
+
+.option-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 260px;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  z-index: 10002; /* 오버레이 내에서 최상단 */
+}
+
+.toggle-btn {
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  color: #333;
+  border-radius: 8px;
+  height: 32px;
+  min-width: 40px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.form-field.collapsed .tag-list,
+.form-field.collapsed .option-panel,
+.form-field.collapsed .option-list,
+.form-field.collapsed .helper,
+.form-field.collapsed .error-message {
+  display: none;
+}
+
+.form-field.collapsed .toggle-btn {
+  transform: rotate(180deg);
+}
+
+/* 옵션 리스트(세로 정렬) */
+.option-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.option-item label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #111;
+}
+
+.option-item input[type="radio"],
+.option-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}

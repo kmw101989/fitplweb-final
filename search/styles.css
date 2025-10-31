@@ -14,31 +14,6 @@ body {
   overflow-x: hidden;
 }
 
-/* Detailpage의 location-tag(active) 스타일을 카테고리 태그에 적용 */
-.sidebar .category-tags-section {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.sidebar .category-tags-section .category-tag {
-  background-color: #ffffff;
-  border: 1px solid #000000; /* active 기준 */
-  color: #000000;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 700;
-  font-family: "Pretendard", sans-serif;
-  cursor: pointer;
-  min-width: 110px;
-  white-space: nowrap;
-  text-align: center;
-}
-
-.sidebar .category-tags-section .category-tag:hover {
-  background-color: #f5f5f5;
-}
 
 /* 메인 프레임 컨테이너 */
 .search-page-frame {
@@ -62,14 +37,6 @@ body {
   gap: 20px;
 }
 
-/* 사이드바 영역 */
-.sidebar {
-  width: 200px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-
 /* 검색바 섹션 */
 .search-bar-section {
   width: 100%;
@@ -83,13 +50,40 @@ body {
   border-radius: 4px;
   padding: 8px 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  gap: 8px;
 }
 
 .search-input-container {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.selected-tags-container {
+  display: none;
+  gap: 8px;
+  align-items: center;
+}
+
+.selected-tags-container .category-tag {
+  padding: 6px 12px;
+  font-size: 12px;
+  position: relative;
+}
+
+.tag-remove {
+  margin-left: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.tag-remove:hover {
+  opacity: 1;
 }
 
 .search-input {
@@ -131,217 +125,34 @@ body {
   justify-content: center;
 }
 
-/* 섹션 공통 스타일 */
-.recent-search-section,
-.recent-brand-section,
-.popular-search-section,
-.trending-search-section {
-  background-color: #f5f5f5;
-  border-radius: 8px;
-  padding: 16px;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.section-title {
-  font-family: "Pretendard", sans-serif;
-  font-weight: 700;
-  font-size: 18px;
-  color: #222222;
-  margin: 0;
-}
-
-.update-time {
-  font-family: "Inter", sans-serif;
-  font-size: 14px;
-  color: #666666;
-  font-weight: 400;
-}
-
-.delete-all-btn {
-  background: none;
-  border: none;
-  font-family: "Pretendard", sans-serif;
-  font-size: 14px;
-  color: #666666;
-  cursor: pointer;
-  font-weight: 400;
-}
-
-/* 태그 컨테이너 */
-.tag-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.search-tag,
-.brand-tag {
-  background-color: #ffffff;
-  border: 1px solid #cccccc;
-  border-radius: 4px;
-  padding: 8px 12px;
-  font-family: "Inter", sans-serif;
-  font-size: 12px;
-  color: #666666;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.search-tag:hover,
-.brand-tag:hover {
-  background-color: #f8f9fa;
-  border-color: #999999;
-}
-
-/* 랭킹 컨테이너 */
-.ranking-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
-}
-
-.ranking-column {
-  display: flex;
-  flex-direction: column;
-}
-
-.rank-item {
-  display: flex;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.rank-item:last-child {
-  border-bottom: none;
-}
-
-.rank-number {
-  font-family: "Inter", sans-serif;
-  font-size: 12px;
-  font-weight: 400;
-  color: #222222;
-  min-width: 20px;
-  text-align: center;
-  margin-right: 8px;
-}
-
-.rank-number.rank-up {
-  color: #5998ff;
-}
-
-.rank-text {
-  font-family: "Inter", sans-serif;
-  font-size: 12px;
-  color: #222222;
-  flex: 1;
-}
-
-.rank-indicator {
-  font-family: "Inter", sans-serif;
-  font-size: 12px;
-  color: #aaaaaa;
-  min-width: 20px;
-  text-align: center;
-}
-
-.rank-indicator.rank-up-arrow {
-  color: #ff0000;
-}
-
-.rank-indicator.rank-down-arrow {
-  color: #5998ff;
-}
 
 /* 카테고리 태그 섹션 */
 .category-tags-section {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
   gap: 8px;
   width: 100%;
+  margin-top: 10px;
 }
 
 .category-tag {
-  padding: 6px 10px;
+  padding: 8px 16px;
   border-radius: 4px;
-  font-family: "Inter", sans-serif;
-  font-size: 11px;
-  font-weight: 400;
+  font-family: "Pretendard", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  border: 1px solid;
-  width: 35%;
-  text-align: center;
-}
-
-.category-tag.beauty {
-  color: #f2665e;
-  border-color: #f2665e;
-  background-color: transparent;
-}
-
-.category-tag.player {
-  color: #37b0f4;
-  border-color: #37b0f4;
-  background-color: transparent;
-}
-
-.category-tag.outlet {
-  color: #b90000;
-  border-color: #b90000;
-  background-color: transparent;
-}
-
-.category-tag.boutique {
-  color: #0000ff;
-  border-color: #0000ff;
-  background-color: transparent;
-}
-
-.category-tag.shoes {
-  color: #555d66;
-  border-color: #555d66;
-  background-color: transparent;
-}
-
-.category-tag.kids {
-  color: #ff6600;
-  border-color: #ff6600;
-  background-color: transparent;
-}
-
-.category-tag.used {
+  border: 1px solid #cccccc;
+  background-color: #ffffff;
   color: #222222;
-  border-color: #f4e04d;
-  background-color: #f4e04d;
-}
-
-.category-tag.travel {
-  color: #f5f5f5;
-  border-color: #7a8ca5;
-  background-color: #7a8ca5;
-}
-
-.category-tag.america {
-  color: #ffffff;
-  border-color: #ff0000;
-  background-color: #ff0000;
-}
-
-.category-tag.australia {
-  color: #ffffff;
-  border-color: #ff6600;
-  background-color: #ff6600;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .category-tag:hover {
-  opacity: 0.8;
+  background-color: #f5f5f5;
   transform: translateY(-1px);
 }
 
@@ -566,30 +377,8 @@ body {
     padding: 16px;
   }
 
-  .sidebar {
-    width: 100%;
-  }
-
   .category-tags-section {
-    flex-direction: row;
-    flex-wrap: wrap;
     justify-content: center;
-  }
-
-  .category-tag {
-    width: auto;
-    flex: 1;
-    min-width: 80px;
-  }
-
-  .ranking-container {
-    grid-template-columns: 1fr;
-  }
-
-  .section-header {
-    flex-direction: column;
-    gap: 8px;
-    align-items: flex-start;
   }
 
   .frame-info-panel {
@@ -610,24 +399,12 @@ body {
     padding: 12px;
   }
 
-  .section-title {
-    font-size: 16px;
-  }
-
   .search-input {
     font-size: 12px;
   }
 
-  .rank-text,
-  .rank-number,
-  .rank-indicator {
-    font-size: 11px;
-  }
-
-  .search-tag,
-  .brand-tag,
   .category-tag {
-    font-size: 11px;
-    padding: 6px 10px;
+    font-size: 12px;
+    padding: 6px 12px;
   }
 }

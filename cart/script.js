@@ -1,4 +1,189 @@
 document.addEventListener("DOMContentLoaded", function () {
+  // FitPL entry popup (full behavior same as fitpl-website)
+  const entryPopup = document.getElementById("entryPopup");
+  const entryPopupClose = document.getElementById("entryPopupClose");
+  const appContainer = document.querySelector(".payment-container");
+  const countryList = document.getElementById("countryList");
+  const prefCategoryList = document.getElementById("prefCategoryList");
+  const activityList = document.getElementById("activityList");
+  const cityList = document.getElementById("cityList");
+  const entryForm = document.getElementById("entryForm");
+  const countryError = document.getElementById("countryError");
+  const prefCatError = document.getElementById("prefCatError");
+  const activityError = document.getElementById("activityError");
+  const chipsCountry = document.getElementById("countryChips");
+  const chipsCity = document.getElementById("cityChips");
+  const chipsPref = document.getElementById("prefCatChips");
+  const chipsActivity = document.getElementById("activityChips");
+
+  function showEntryPopup() {
+    if (!entryPopup) return;
+    entryPopup.classList.add("show");
+    document.body.style.overflow = "hidden";
+    if (appContainer) {
+      appContainer.classList.add("non-interactive");
+      appContainer.setAttribute("aria-hidden", "true");
+      try { appContainer.setAttribute("inert", ""); } catch (_) {}
+    }
+  }
+
+  function hideEntryPopup() {
+    if (!entryPopup) return;
+    entryPopup.classList.remove("show");
+    document.body.style.overflow = "auto";
+    if (appContainer) {
+      appContainer.classList.remove("non-interactive");
+      appContainer.removeAttribute("aria-hidden");
+      appContainer.removeAttribute("inert");
+    }
+  }
+
+  if (entryPopupClose) entryPopupClose.addEventListener("click", hideEntryPopup);
+  if (entryPopup) {
+    entryPopup.addEventListener("click", (e) => { if (e.target === entryPopup) hideEntryPopup(); });
+  }
+
+  // show popup only when '여행예정지역' 버튼 클릭
+  const regionBtn = document.querySelector('.region-btn[aria-label="여행예정지역"]');
+  if (regionBtn) {
+    regionBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      showEntryPopup();
+    });
+  }
+
+  // Focus trap
+  document.addEventListener("keydown", (e) => {
+    if (!entryPopup || !entryPopup.classList.contains("show")) return;
+    if (e.key !== "Tab") return;
+    const focusables = entryPopup.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+
+  // Toggle header
+  const toggleButtons = document.querySelectorAll(".entry-popup .toggle-btn");
+  toggleButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const field = btn.closest(".form-field");
+      if (!field) return;
+      const isCollapsed = field.classList.toggle("collapsed");
+      btn.setAttribute("aria-expanded", String(!isCollapsed));
+    });
+  });
+
+  function collapseField(field) {
+    if (!field) return;
+    field.classList.add('collapsed');
+    const btn = field.querySelector('.toggle-btn');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+  }
+
+  // Chips helper
+  function renderChips(container, values, onRemove) {
+    if (!container) return;
+    container.innerHTML = "";
+    values.forEach((val) => {
+      const chip = document.createElement('span');
+      chip.className = 'chip';
+      const text = document.createElement('span');
+      text.textContent = val;
+      chip.appendChild(text);
+      if (onRemove) {
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.setAttribute('aria-label', `${val} 제거`);
+        closeBtn.textContent = '×';
+        closeBtn.addEventListener('click', () => onRemove(val));
+        chip.appendChild(closeBtn);
+      }
+      container.appendChild(chip);
+    });
+  }
+
+  // Country
+  if (countryList) {
+    countryList.addEventListener("change", () => {
+      if (countryError) countryError.textContent = "";
+      const selected = document.querySelector('input[name="country"]:checked');
+      renderChips(chipsCountry, selected ? [selected.value] : [], (value) => {
+        const input = countryList.querySelector(`input[value="${value}"]`);
+        if (input) input.checked = false;
+        renderChips(chipsCountry, [], null);
+      });
+      collapseField(countryList.closest('.form-field'));
+    });
+  }
+
+  // City
+  if (cityList) {
+    cityList.addEventListener("change", () => {
+      const selected = document.querySelector('input[name="city"]:checked');
+      renderChips(chipsCity, selected ? [selected.value] : [], (value) => {
+        const input = cityList.querySelector(`input[value="${value}"]`);
+        if (input) input.checked = false;
+        renderChips(chipsCity, [], null);
+      });
+      collapseField(cityList.closest('.form-field'));
+    });
+  }
+
+  // Pref categories
+  if (prefCategoryList) {
+    prefCategoryList.addEventListener("change", () => {
+      if (prefCatError) prefCatError.textContent = "";
+      const checked = prefCategoryList.querySelectorAll('input[name="prefCat"]:checked');
+      renderChips(chipsPref, Array.from(checked).map((c) => c.value), (value) => {
+        const input = prefCategoryList.querySelector(`input[value="${value}"]`);
+        if (input) input.checked = false;
+        const rest = prefCategoryList.querySelectorAll('input[name="prefCat"]:checked');
+        renderChips(chipsPref, Array.from(rest).map((c) => c.value), null);
+      });
+      collapseField(prefCategoryList.closest('.form-field'));
+    });
+  }
+
+  // Activities with max 3
+  if (activityList) {
+    activityList.addEventListener("change", (e) => {
+      const checkboxes = activityList.querySelectorAll('input[name="activity"]');
+      const checked = Array.from(checkboxes).filter((c) => c.checked);
+      if (checked.length > 3) {
+        const target = e.target; if (target && target.checked) target.checked = false;
+        if (activityError) activityError.textContent = "최대 3개까지 선택 가능합니다.";
+      } else {
+        if (activityError) activityError.textContent = "";
+        renderChips(chipsActivity, checked.map((c) => c.value), (value) => {
+          const input = activityList.querySelector(`input[value=\"${value}\"]`);
+          if (input) input.checked = false;
+          const rest = activityList.querySelectorAll('input[name="activity"]:checked');
+          renderChips(chipsActivity, Array.from(rest).map((c) => c.value), null);
+        });
+        if (checked.length === 3) {
+          collapseField(activityList.closest('.form-field'));
+        }
+      }
+    });
+  }
+
+  // Submit -> basic validation + close
+  if (entryForm) {
+    entryForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const selectedCountry = document.querySelector('input[name="country"]:checked');
+      if (!selectedCountry) {
+        if (countryError) countryError.textContent = "여행지역을 1개 선택해 주세요."; return;
+      }
+      const selectedPrefCats = document.querySelectorAll('input[name="prefCat"]:checked');
+      if (!selectedPrefCats.length) {
+        if (prefCatError) prefCatError.textContent = "선호 활동 대분류를 최소 1개 선택해 주세요."; return;
+      }
+      hideEntryPopup();
+    });
+  }
   // 결제 수단 선택 기능
   const paymentRadios = document.querySelectorAll('input[name="payment"]');
   const paymentTypeBtns = document.querySelectorAll(".payment-type-btn");

@@ -23,7 +23,6 @@ class FigmaSearchPageController {
   init() {
     this.setupEventListeners();
     this.loadStoredData();
-    this.updateRankings();
     console.log("Figma SearchPage Controller 초기화 완료");
   }
 
@@ -52,55 +51,26 @@ class FigmaSearchPageController {
       );
     }
 
-    // 최근 검색어 삭제
-    const deleteRecentBtn = document.getElementById("deleteRecentBtn");
-    if (deleteRecentBtn) {
-      deleteRecentBtn.addEventListener("click", () =>
-        this.clearRecentSearches()
-      );
-    }
 
-    // 최근 브랜드 삭제
-    const deleteBrandBtn = document.getElementById("deleteBrandBtn");
-    if (deleteBrandBtn) {
-      deleteBrandBtn.addEventListener("click", () => this.clearRecentBrands());
-    }
-
-    // 검색 태그 클릭
-    document.querySelectorAll(".search-tag").forEach((tag) => {
-      tag.addEventListener("click", (e) => {
-        const searchTerm = e.target.dataset.search;
-        this.searchFromTag(searchTerm);
-      });
-    });
-
-    // 브랜드 태그 클릭
-    document.querySelectorAll(".brand-tag").forEach((tag) => {
-      tag.addEventListener("click", (e) => {
-        const brandName = e.target.dataset.brand;
-        this.searchFromBrand(brandName);
-      });
-    });
-
-    // 랭킹 아이템 클릭
-    document.querySelectorAll(".rank-item").forEach((item) => {
-      item.addEventListener("click", () => {
-        const rankText = item.querySelector(".rank-text").textContent;
-        this.searchFromRanking(rankText);
-      });
-    });
 
     // 카테고리 태그 클릭
     document.querySelectorAll(".category-tag").forEach((tag) => {
       tag.addEventListener("click", (e) => {
         const category = e.target.dataset.category;
 
-        // beauty 카테고리 클릭 시 Detailpage로 이동
-        if (category === "beauty") {
+        // 베트남( player ) 클릭 시 Nation1-1로 이동
+        if (category === "player") {
+          this.navigateToNation1_1();
+          return;
+        }
+
+        // beauty 태그가 selected 상태일 때 Detailpage로 이동
+        if (category === "beauty" && e.target.classList.contains("selected")) {
           this.navigateToDetailPage();
           return;
         }
 
+        this.moveTagToSearchBar(e.target);
         this.filterByCategory(category);
       });
     });
@@ -168,42 +138,7 @@ class FigmaSearchPageController {
         this.searchHistory.pop();
       }
       this.saveStoredData();
-      this.updateSearchHistoryUI();
     }
-  }
-
-  // 브랜드 히스토리에 추가
-  addToBrandHistory(brandName) {
-    if (!this.brandHistory.includes(brandName)) {
-      this.brandHistory.unshift(brandName);
-      if (this.brandHistory.length > 10) {
-        this.brandHistory.pop();
-      }
-      this.saveStoredData();
-      this.updateBrandHistoryUI();
-    }
-  }
-
-  // 태그에서 검색
-  searchFromTag(searchTerm) {
-    const searchInput = document.getElementById("searchInput");
-    searchInput.value = searchTerm;
-    this.performSearch();
-  }
-
-  // 브랜드에서 검색
-  searchFromBrand(brandName) {
-    this.addToBrandHistory(brandName);
-    const searchInput = document.getElementById("searchInput");
-    searchInput.value = brandName;
-    this.performSearch();
-  }
-
-  // 랭킹에서 검색
-  searchFromRanking(rankText) {
-    const searchInput = document.getElementById("searchInput");
-    searchInput.value = rankText;
-    this.performSearch();
   }
 
   // Detailpage로 이동
@@ -212,10 +147,82 @@ class FigmaSearchPageController {
     window.location.href = "../Detailpage/index.html";
   }
 
+  // Nation1-1로 이동
+  navigateToNation1_1() {
+    window.location.href = "../Nation1-1/index.html";
+  }
+
   // Fitpl Website로 이동
   navigateToFitplWebsite() {
     // Fitpl Website로 이동
     window.location.href = "../fitpl-website/index.html";
+  }
+
+  // 태그를 검색바로 이동
+  moveTagToSearchBar(tagElement) {
+    const selectedTagsContainer = document.getElementById("selectedTagsContainer");
+    
+    // 이미 선택된 태그인지 확인
+    const isAlreadySelected = tagElement.classList.contains("selected");
+    
+    if (isAlreadySelected) {
+      // 이미 선택된 태그면 제거하고 category-tags-section으로 다시 이동
+      this.moveTagBackToCategory(tagElement);
+    } else {
+      // 원래 인덱스 저장
+      const categoryTagsSection = document.querySelector(".category-tags-section");
+      const allTags = Array.from(categoryTagsSection.children);
+      const originalIndex = allTags.indexOf(tagElement);
+      tagElement.dataset.originalIndex = originalIndex;
+      
+      // 태그를 search-bar로 이동
+      selectedTagsContainer.appendChild(tagElement);
+      tagElement.classList.add("selected");
+      
+      // 제거 버튼 추가
+      const removeBtn = document.createElement("span");
+      removeBtn.className = "tag-remove";
+      removeBtn.textContent = "×";
+      removeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.moveTagBackToCategory(tagElement);
+      });
+      
+      tagElement.appendChild(removeBtn);
+      selectedTagsContainer.style.display = "flex";
+    }
+  }
+  
+  // 태그를 다시 category-tags-section으로 이동
+  moveTagBackToCategory(tagElement) {
+    const selectedTagsContainer = document.getElementById("selectedTagsContainer");
+    const categoryTagsSection = document.querySelector(".category-tags-section");
+    
+    // 제거 버튼 제거
+    const removeBtn = tagElement.querySelector(".tag-remove");
+    if (removeBtn) {
+      removeBtn.remove();
+    }
+    
+    // 원래 인덱스 가져오기
+    const originalIndex = parseInt(tagElement.dataset.originalIndex);
+    
+    // category-tags-section으로 이동 - 원래 위치에 배치
+    if (isNaN(originalIndex) || originalIndex >= categoryTagsSection.children.length) {
+      // 인덱스가 유효하지 않으면 마지막에 추가
+      categoryTagsSection.appendChild(tagElement);
+    } else {
+      // 원래 위치에 삽입
+      const referenceTag = categoryTagsSection.children[originalIndex];
+      categoryTagsSection.insertBefore(tagElement, referenceTag);
+    }
+    
+    tagElement.classList.remove("selected");
+    
+    // 선택된 태그가 없으면 컨테이너 숨기기
+    if (selectedTagsContainer.children.length === 0) {
+      selectedTagsContainer.style.display = "none";
+    }
   }
 
   // 카테고리 필터링
@@ -258,98 +265,6 @@ class FigmaSearchPageController {
     setTimeout(() => {
       searchPageFrame.style.transform = "scale(1)";
     }, 300);
-  }
-
-  // 검색어 히스토리 UI 업데이트
-  updateSearchHistoryUI() {
-    const tagContainer = document.querySelector(
-      ".recent-search-section .tag-container"
-    );
-    if (!tagContainer) return;
-
-    tagContainer.innerHTML = "";
-    this.searchHistory.slice(0, 6).forEach((searchTerm) => {
-      const tag = document.createElement("div");
-      tag.className = "search-tag";
-      tag.dataset.search = searchTerm;
-      tag.textContent = `${searchTerm} ×`;
-      tag.addEventListener("click", (e) => {
-        this.searchFromTag(e.target.dataset.search);
-      });
-      tagContainer.appendChild(tag);
-    });
-  }
-
-  // 브랜드 히스토리 UI 업데이트
-  updateBrandHistoryUI() {
-    const tagContainer = document.querySelector(
-      ".recent-brand-section .tag-container"
-    );
-    if (!tagContainer) return;
-
-    tagContainer.innerHTML = "";
-    this.brandHistory.slice(0, 8).forEach((brandName) => {
-      const tag = document.createElement("div");
-      tag.className = "brand-tag";
-      tag.dataset.brand = brandName;
-      tag.textContent = `${brandName} ×`;
-      tag.addEventListener("click", (e) => {
-        this.searchFromBrand(e.target.dataset.brand);
-      });
-      tagContainer.appendChild(tag);
-    });
-  }
-
-  // 최근 검색어 삭제
-  clearRecentSearches() {
-    this.searchHistory = [];
-    this.saveStoredData();
-    this.updateSearchHistoryUI();
-    this.showToast("최근 검색어가 삭제되었습니다", "info");
-  }
-
-  // 최근 브랜드 삭제
-  clearRecentBrands() {
-    this.brandHistory = [];
-    this.saveStoredData();
-    this.updateBrandHistoryUI();
-    this.showToast("최근 방문 브랜드가 삭제되었습니다", "info");
-  }
-
-  // 검색어 지우기
-  clearSearch() {
-    const searchInput = document.getElementById("searchInput");
-    searchInput.value = "";
-    searchInput.focus();
-  }
-
-  // 랭킹 업데이트 (실시간 시뮬레이션)
-  updateRankings() {
-    setInterval(() => {
-      this.simulateRankingChange();
-    }, 30000); // 30초마다 랭킹 변화 시뮬레이션
-  }
-
-  // 랭킹 변화 시뮬레이션
-  simulateRankingChange() {
-    const rankItems = document.querySelectorAll(".rank-item");
-    rankItems.forEach((item) => {
-      const indicator = item.querySelector(".rank-indicator");
-      if (indicator && Math.random() < 0.1) {
-        // 10% 확률로 변화
-        const changes = ["▲", "▼", "-"];
-        const colors = ["#ff0000", "#5998ff", "#aaaaaa"];
-        const randomIndex = Math.floor(Math.random() * changes.length);
-
-        indicator.textContent = changes[randomIndex];
-        indicator.style.color = colors[randomIndex];
-
-        setTimeout(() => {
-          indicator.textContent = "-";
-          indicator.style.color = "#aaaaaa";
-        }, 5000);
-      }
-    });
   }
 
   // 프레임 정보 표시
@@ -439,12 +354,10 @@ class FigmaSearchPageController {
 
       if (storedSearchHistory) {
         this.searchHistory = JSON.parse(storedSearchHistory);
-        this.updateSearchHistoryUI();
       }
 
       if (storedBrandHistory) {
         this.brandHistory = JSON.parse(storedBrandHistory);
-        this.updateBrandHistoryUI();
       }
     } catch (error) {
       console.error("데이터 로드 실패:", error);
@@ -530,8 +443,4 @@ window.figmaUtils = {
   getBrandHistory: () => window.figmaSearchController.brandHistory,
   showFrameInfo: () => window.figmaSearchController.showFrameInfo(),
   exportData: () => window.figmaSearchController.exportFrameData(),
-  clearAllData: () => {
-    window.figmaSearchController.clearRecentSearches();
-    window.figmaSearchController.clearRecentBrands();
-  },
 };

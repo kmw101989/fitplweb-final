@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>FitPl - 여행 스타일링 플랫폼</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="/fitpl-website/styles.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -1322,6 +1322,154 @@
       </div>
     </div>
 
-    <script src="script.js"></script>
+    <!-- 진입 팝업 -->
+    <div class="entry-popup-overlay" id="entryPopup">
+      <div class="entry-popup">
+        <button class="entry-popup-close" id="entryPopupClose" aria-label="닫기">×</button>
+        <div class="entry-popup-content">
+          <h3>FITPL에 오신 것을 환영합니다</h3>
+          <p>여행지에 맞는 스타일링을 지금 바로 확인해 보세요!</p>
+          <form class="entry-form" id="entryForm" novalidate>
+            <div class="form-field">
+              <label for="entryName">이름 (선택)</label>
+              <input type="text" id="entryName" placeholder="이름을 입력하세요" />
+            </div>
+            <div class="form-field">
+              <label for="entryEmail">이메일 (선택)</label>
+              <input type="email" id="entryEmail" placeholder="example@email.com" />
+            </div>
+
+            <div class="form-field collapsed">
+              <div class="field-title">
+                <label>관심있거나 예정 여행지역 (필수, 1개 선택)</label>
+                <button type="button" class="toggle-btn" aria-expanded="false">▼</button>
+              </div>
+              <div class="selected-chips" id="countryChips"></div>
+              <div class="option-panel">
+              <ul class="option-list" id="countryList" role="radiogroup" aria-label="여행지역">
+                <li class="option-item"><label><input type="radio" name="country" value="일본" /> 일본</label></li>
+                <li class="option-item"><label><input type="radio" name="country" value="중국" /> 중국</label></li>
+                <li class="option-item"><label><input type="radio" name="country" value="대만" /> 대만</label></li>
+                <li class="option-item"><label><input type="radio" name="country" value="태국" /> 태국</label></li>
+                <li class="option-item"><label><input type="radio" name="country" value="베트남" /> 베트남</label></li>
+                <li class="option-item"><label><input type="radio" name="country" value="필리핀" /> 필리핀</label></li>
+                <li class="option-item"><label><input type="radio" name="country" value="홍콩" /> 홍콩</label></li>
+                <li class="option-item"><label><input type="radio" name="country" value="마카오" /> 마카오</label></li>
+                <li class="option-item"><label><input type="radio" name="country" value="인도네시아" /> 인도네시아</label></li>
+                <li class="option-item"><label><input type="radio" name="country" value="미국" /> 미국</label></li>
+                <li class="option-item"><label><input type="radio" name="country" value="싱가포르" /> 싱가포르</label></li>
+                <li class="option-item"><label><input type="radio" name="country" value="호주" /> 호주</label></li>
+              </ul>
+              </div>
+            </div>
+
+            <div class="form-field collapsed">
+              <div class="field-title">
+                <label>도시 (필수, 1개 선택)</label>
+                <button type="button" class="toggle-btn" aria-expanded="false">▼</button>
+              </div>
+              <div class="selected-chips" id="cityChips"></div>
+              <div class="option-panel">
+              <ul class="option-list" id="cityList" role="radiogroup" aria-label="도시">
+                <li class="option-item"><label><input type="radio" name="city" value="도쿄" /> 도쿄</label></li>
+                <li class="option-item"><label><input type="radio" name="city" value="오사카" /> 오사카</label></li>
+                <li class="option-item"><label><input type="radio" name="city" value="상하이" /> 상하이</label></li>
+                <li class="option-item"><label><input type="radio" name="city" value="광저우" /> 광저우</label></li>
+                <li class="option-item"><label><input type="radio" name="city" value="가오슝" /> 가오슝</label></li>
+                <li class="option-item"><label><input type="radio" name="city" value="타이베이" /> 타이베이</label></li>
+                <li class="option-item"><label><input type="radio" name="city" value="방콕" /> 방콕</label></li>
+                <li class="option-item"><label><input type="radio" name="city" value="치앙마이" /> 치앙마이</label></li>
+                <li class="option-item"><label><input type="radio" name="city" value="다낭" /> 다낭</label></li>
+                <li class="option-item"><label><input type="radio" name="city" value="하노이" /> 하노이</label></li>
+                <li class="option-item"><label><input type="radio" name="city" value="마닐라" /> 마닐라</label></li>
+                <li class="option-item"><label><input type="radio" name="city" value="세부" /> 세부</label></li>
+                <li class="option-item"><label><input type="radio" name="city" value="홍콩" /> 홍콩</label></li>
+                <li class="option-item"><label><input type="radio" name="city" value="마카오" /> 마카오</label></li>
+                <li class="option-item"><label><input type="radio" name="city" value="발리" /> 발리</label></li>
+                <li class="option-item"><label><input type="radio" name="city" value="자카르타" /> 자카르타</label></li>
+                <li class="option-item"><label><input type="radio" name="city" value="괌" /> 괌</label></li>
+                <li class="option-item"><label><input type="radio" name="city" value="하와이" /> 하와이</label></li>
+                <li class="option-item"><label><input type="radio" name="city" value="싱가포르" /> 싱가포르</label></li>
+                <li class="option-item"><label><input type="radio" name="city" value="시드니" /> 시드니</label></li>
+              </ul>
+              </div>
+              <div class="helper">한 국가만 선택할 수 있어요.</div>
+              <div class="error-message" id="countryError" aria-live="polite"></div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-field">
+                <label for="startDate">여행 시작일 (선택)</label>
+                <input type="date" id="startDate" />
+              </div>
+              <div class="form-field">
+                <label for="endDate">여행 종료일 (선택)</label>
+                <input type="date" id="endDate" />
+              </div>
+            </div>
+
+            <div class="form-field collapsed">
+              <div class="field-title">
+                <label>선호 활동 대분류 (필수, 중복 가능)</label>
+                <button type="button" class="toggle-btn" aria-expanded="false">▼</button>
+              </div>
+              <div class="selected-chips" id="prefCatChips"></div>
+              <div class="option-panel">
+              <ul class="option-list" id="prefCategoryList" aria-label="대분류 활동">
+                <li class="option-item"><label><input type="checkbox" name="prefCat" value="인도어" /> 인도어</label></li>
+                <li class="option-item"><label><input type="checkbox" name="prefCat" value="아웃도어" /> 아웃도어</label></li>
+                <li class="option-item"><label><input type="checkbox" name="prefCat" value="둘다" /> 둘다</label></li>
+              </ul>
+              </div>
+              <div class="helper">하나 이상 선택해 주세요.</div>
+              <div class="error-message" id="prefCatError" aria-live="polite"></div>
+            </div>
+
+            <div class="form-field collapsed">
+              <div class="field-title">
+                <label>선호 활동 소분류 (선택, 최대 3개)</label>
+                <button type="button" class="toggle-btn" aria-expanded="false">▼</button>
+              </div>
+              <div class="selected-chips" id="activityChips"></div>
+              <div class="option-panel">
+              <ul class="option-list" id="activityList" aria-label="선호 활동">
+                <li class="option-item"><label><input type="checkbox" name="activity" value="도시" /> 도시</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="쇼핑" /> 쇼핑</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="음식" /> 음식</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="레스토랑" /> 레스토랑</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="미식" /> 미식</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="서핑" /> 서핑</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="스노클링" /> 스노클링</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="다이빙" /> 다이빙</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="박물관" /> 박물관</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="아트" /> 아트</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="하이킹" /> 하이킹</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="트레킹" /> 트레킹</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="테마파크" /> 테마파크</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="놀이공원" /> 놀이공원</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="실내 야외 전망대" /> 실내 야외 전망대</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="마켓나이트" /> 마켓나이트</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="동물원" /> 동물원</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="대성당" /> 대성당</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="교회" /> 교회</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="사원수" /> 사원수</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="국립공원" /> 국립공원</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="수족관" /> 수족관</label></li>
+                <li class="option-item"><label><input type="checkbox" name="activity" value="해변" /> 해변</label></li>
+              </ul>
+              </div>
+              <div class="helper">최대 3개까지 선택 가능합니다.</div>
+              <div class="error-message" id="activityError" aria-live="polite"></div>
+            </div>
+
+            <div class="form-actions">
+              <button type="submit" class="submit-btn" id="entrySubmit">제출</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script src="/fitpl-website/script.js"></script>
   </body>
 </html>

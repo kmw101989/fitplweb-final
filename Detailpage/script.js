@@ -1,3 +1,450 @@
+// 국가별 설정
+const countryConfig = {
+  일본: {
+    regionId: 1, // 도쿄 (기본값)
+    regions: [
+      { id: 1, name: "도쿄" },
+      { id: 2, name: "오사카" },
+    ],
+    heroTitle: "일본 거리에서 만나는<br />여행과 스타일의 완벽한 조합",
+    defaultRegion: "후쿠오카",
+  },
+  중국: {
+    regionId: 3, // 상하이 (기본값)
+    regions: [
+      { id: 3, name: "상하이" },
+      { id: 4, name: "광저우" },
+    ],
+    heroTitle: "중국 도시에서 만나는<br />모던한 스타일링",
+    defaultRegion: "상하이",
+  },
+  대만: {
+    regionId: 6, // 타이베이
+    regions: [
+      { id: 6, name: "타이베이" },
+      { id: 5, name: "가오슝" },
+    ],
+    heroTitle: "대만 거리에서 만나는<br />트렌디한 패션",
+    defaultRegion: "타이베이",
+  },
+  태국: {
+    regionId: 7, // 방콕
+    regions: [
+      { id: 7, name: "방콕" },
+      { id: 8, name: "치앙마이" },
+    ],
+    heroTitle: "태국 도시에서 만나는<br />트로피컬 스타일",
+    defaultRegion: "방콕",
+  },
+  베트남: {
+    regionId: 10, // 하노이
+    regions: [
+      { id: 10, name: "하노이" },
+      { id: 9, name: "다낭" },
+    ],
+    heroTitle: "베트남 거리에서 만나는<br />빈티지 패션",
+    defaultRegion: "하노이",
+  },
+  필리핀: {
+    regionId: 11, // 마닐라
+    regions: [
+      { id: 11, name: "마닐라" },
+      { id: 12, name: "세부" },
+    ],
+    heroTitle: "필리핀 도시에서 만나는<br />캐주얼 스타일",
+    defaultRegion: "마닐라",
+  },
+  홍콩: {
+    regionId: 13,
+    regions: [{ id: 13, name: "홍콩" }],
+    heroTitle: "홍콩 거리에서 만나는<br />럭셔리 스타일",
+    defaultRegion: "홍콩",
+  },
+  마카오: {
+    regionId: 14,
+    regions: [{ id: 14, name: "마카오" }],
+    heroTitle: "마카오에서 만나는<br />엘레강트 스타일",
+    defaultRegion: "마카오",
+  },
+  인도네시아: {
+    regionId: 16, // 자카르타
+    regions: [
+      { id: 16, name: "자카르타" },
+      { id: 15, name: "발리" },
+    ],
+    heroTitle: "인도네시아에서 만나는<br />트로피컬 패션",
+    defaultRegion: "자카르타",
+  },
+  미주: {
+    regionId: 17, // 괌
+    regions: [
+      { id: 17, name: "괌" },
+      { id: 18, name: "하와이" },
+    ],
+    heroTitle: "미주 지역에서 만나는<br />리조트 스타일",
+    defaultRegion: "괌",
+  },
+  싱가포르: {
+    regionId: 19,
+    regions: [{ id: 19, name: "싱가포르" }],
+    heroTitle: "싱가포르에서 만나는<br />모던 스타일",
+    defaultRegion: "싱가포르",
+  },
+  호주: {
+    regionId: 20, // 시드니
+    regions: [{ id: 20, name: "시드니" }],
+    heroTitle: "호주에서 만나는<br />아웃도어 스타일",
+    defaultRegion: "시드니",
+  },
+};
+
+// URL 파라미터에서 국가 가져오기
+function getCountryFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("country") || "일본";
+}
+
+// 현재 국가 설정 가져오기
+function getCurrentCountryConfig() {
+  const country = getCountryFromURL();
+  return countryConfig[country] || countryConfig["일본"];
+}
+
+// 페이지 내용 동적 업데이트
+function updatePageContent() {
+  const country = getCountryFromURL();
+  const config = getCurrentCountryConfig();
+
+  // URL에서 region_id 확인
+  const params = new URLSearchParams(window.location.search);
+  let regionId = params.get("region_id");
+
+  // region_id가 없으면 첫 번째 지역(region_id가 가장 작은 것)으로 자동 설정
+  if (!regionId && config.regions.length > 0) {
+    // region_id로 정렬하여 가장 작은 것 선택
+    const sortedRegions = [...config.regions].sort((a, b) => a.id - b.id);
+    const firstRegion = sortedRegions[0];
+    regionId = firstRegion.id.toString();
+
+    // URL에 region_id 추가 (페이지 새로고침 없이)
+    params.set("region_id", regionId);
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, "", newUrl);
+  }
+
+  // region_id에 해당하는 지역 찾기
+  let selectedRegion = config.defaultRegion;
+  if (regionId) {
+    const region = config.regions.find((r) => r.id === parseInt(regionId));
+    if (region) {
+      selectedRegion = region.name;
+    } else {
+      // 찾지 못했으면 첫 번째 지역 사용
+      const sortedRegions = [...config.regions].sort((a, b) => a.id - b.id);
+      if (sortedRegions.length > 0) {
+        selectedRegion = sortedRegions[0].name;
+      }
+    }
+  }
+
+  // 페이지 제목 업데이트
+  document.title = `${country} | ${selectedRegion} - MUSINSA`;
+
+  // 헤더 업데이트
+  const pageHeader = document.querySelector(".page-header h1");
+  if (pageHeader) {
+    pageHeader.textContent = `${country} | ${selectedRegion}`;
+  }
+
+  // 히어로 섹션 업데이트
+  const heroTitle = document.querySelector(".hero-title");
+  if (heroTitle) {
+    heroTitle.innerHTML = config.heroTitle;
+  }
+
+  // 날씨 정보 업데이트
+  const weatherTemp = document.getElementById("weather-temp");
+  if (weatherTemp) {
+    weatherTemp.textContent = `${selectedRegion} 28.2°C | `;
+  }
+
+  // 지역 태그 업데이트
+  updateLocationTags(config);
+}
+
+// 지역 태그 업데이트
+function updateLocationTags(config) {
+  const locationTagsContainer = document.querySelector(".location-tags");
+  if (!locationTagsContainer) return;
+
+  locationTagsContainer.innerHTML = "";
+
+  // 현재 URL 파라미터 가져오기
+  const currentParams = new URLSearchParams(window.location.search);
+  const currentCountry = currentParams.get("country") || getCountryFromURL();
+  const currentRegionId = currentParams.get("region_id");
+
+  // region_id로 정렬 (작은 것부터)
+  const sortedRegions = [...config.regions].sort((a, b) => a.id - b.id);
+
+  sortedRegions.forEach((region, index) => {
+    const tag = document.createElement("button");
+    tag.className = "location-tag";
+    tag.textContent = region.name;
+    tag.dataset.location = region.name.toLowerCase();
+    tag.dataset.regionId = region.id;
+
+    // 현재 선택된 region_id와 일치하면 active
+    if (currentRegionId && parseInt(currentRegionId) === region.id) {
+      tag.classList.add("active");
+    } else if (!currentRegionId && index === 0) {
+      // region_id가 없고 첫 번째 지역이면 active
+      tag.classList.add("active");
+    }
+
+    tag.addEventListener("click", () => {
+      // URL에 region_id 파라미터 추가
+      const params = new URLSearchParams(window.location.search);
+      params.set("region_id", region.id);
+
+      // URL 업데이트 (페이지 새로고침 없이)
+      const newUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.pushState({}, "", newUrl);
+
+      // 모든 태그에서 active 제거
+      document
+        .querySelectorAll(".location-tag")
+        .forEach((t) => t.classList.remove("active"));
+      tag.classList.add("active");
+
+      // 페이지 헤더 업데이트
+      const country = getCountryFromURL();
+      const pageHeader = document.querySelector(".page-header h1");
+      if (pageHeader) {
+        pageHeader.textContent = `${country} | ${region.name}`;
+      }
+
+      // 날씨 정보 업데이트
+      const weatherTemp = document.getElementById("weather-temp");
+      if (weatherTemp) {
+        weatherTemp.textContent = `${region.name} 28.2°C | `;
+      }
+
+      // 제품 다시 로드
+      loadProductsForRegion(region.id);
+    });
+
+    locationTagsContainer.appendChild(tag);
+  });
+
+  // 더보기 버튼 (필요시)
+  if (config.regions.length > 3) {
+    const moreBtn = document.createElement("button");
+    moreBtn.className = "location-tag";
+    moreBtn.textContent = "+더보기";
+    locationTagsContainer.appendChild(moreBtn);
+  }
+}
+
+// 유저 ID 결정 함수: 유저의 trip_region_id와 현재 페이지 지역 ID 비교
+// 일치하면 유저 ID, 불일치하면 게스트 ID(region_id) 반환
+function determineUserId(currentPageRegionId) {
+  const user = getUserFromStorage();
+
+  // 유저 정보가 없거나 페이지 지역 ID가 없으면 게스트
+  if (!user || !currentPageRegionId) {
+    return currentPageRegionId || null; // 게스트는 region_id = user_id
+  }
+
+  // 유저의 trip_region_id와 현재 페이지 지역 ID 비교
+  if (user.trip_region_id === currentPageRegionId) {
+    // 일치: 유저 ID 사용
+    return user.user_id;
+  } else {
+    // 불일치: 해당 지역의 게스트 ID 사용 (region_id = user_id)
+    return currentPageRegionId;
+  }
+}
+
+// 지역별 제품 로드
+async function loadProductsForRegion(regionId) {
+  // 유저의 trip_region_id와 현재 페이지 region_id 비교하여 적절한 user_id 결정
+  const userId = determineUserId(regionId);
+
+  console.log(`제품 로드: region_id=${regionId}, 사용할 user_id=${userId}`);
+
+  try {
+    // 날씨별 추천
+    await loadSectionProducts("weather-section", userId, "climate");
+
+    // 활동별 추천
+    await loadSectionProducts("activity-section", userId, "activity");
+
+    // 사진용 추천 (photo)
+    await loadSectionProducts("photo-section", userId, "photo");
+  } catch (error) {
+    console.error("제품 로드 실패:", error);
+  }
+}
+
+// 섹션별 제품 로드
+async function loadSectionProducts(sectionId, userId, type) {
+  const section = document.getElementById(sectionId);
+  if (!section) return;
+
+  const productGrid = section.querySelector(".product-grid");
+  if (!productGrid) return;
+
+  const base = "/.netlify/functions/db";
+  let url = "";
+
+  // userId가 있으면 유저 뷰 사용, 없으면 게스트 추천 사용
+  if (userId) {
+    if (type === "climate") {
+      url = `${base}?op=user_country_climate_top&user_id=${userId}&limit=20`;
+    } else if (type === "activity") {
+      url = `${base}?op=user_country_activity_top&user_id=${userId}&limit=20`;
+    } else if (type === "photo") {
+      url = `${base}?op=user_country_photo_top&user_id=${userId}&limit=20`;
+    }
+  } else {
+    // userId가 없으면 게스트 추천 사용 (기후/활동만, 사진은 없음)
+    if (type === "climate") {
+      url = `${base}?op=guest_reco_climate`;
+    } else if (type === "activity") {
+      url = `${base}?op=guest_reco_activity`;
+    } else if (type === "photo") {
+      // 사진용 추천은 게스트용이 없으므로 빈 배열
+      console.log("사진용 추천은 유저 전용입니다.");
+      return;
+    }
+  }
+
+  if (!url) return;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const products = data?.rows || data?.data?.rows || [];
+
+    if (products.length > 0) {
+      renderProductsToGrid(productGrid, products);
+      console.log(
+        `${type} 섹션: ${products.length}개 제품 로드 완료 (user_id: ${userId})`
+      );
+    } else {
+      console.warn(`${type} 섹션: 제품이 없습니다 (user_id: ${userId})`);
+    }
+  } catch (error) {
+    console.error(`${type} 제품 로드 실패:`, error);
+  }
+}
+
+// 제품 그리드에 제품 렌더링
+function renderProductsToGrid(grid, products) {
+  // 기존 제품 제거 (하드코딩된 것들 제외하고 동적으로 추가된 것만)
+  const dynamicProducts = grid.querySelectorAll(
+    ".product-card[data-dynamic='true']"
+  );
+  dynamicProducts.forEach((card) => card.remove());
+
+  products.slice(0, 9).forEach((product) => {
+    const card = createProductCardFromAPI(product);
+    card.setAttribute("data-dynamic", "true");
+    grid.appendChild(card);
+  });
+}
+
+// API 데이터로 제품 카드 생성
+function createProductCardFromAPI(product) {
+  const card = document.createElement("div");
+  card.className = "product-card";
+  card.dataset.productId = product.product_id || "";
+
+  const price = Number(product.price || 0).toLocaleString();
+  const name = (product.product_name || "").replace(/\s+/g, " ").trim();
+  const brand = product.brand || "";
+  const imgUrl =
+    product.img_url ||
+    "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=260&h=312&fit=crop";
+  const discountRate = product.discount_rate
+    ? Math.round(product.discount_rate)
+    : null;
+
+  const discountHTML =
+    discountRate > 0 ? `<span class="discount">${discountRate}%</span>` : "";
+
+  card.innerHTML = `
+    <div class="product-image">
+      <img src="${imgUrl}" alt="${name}" loading="lazy" />
+      <button class="like-btn">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path
+            d="M17.5 6.25C17.5 3.75 15.5 2.5 13.75 2.5C12.5 2.5 11.25 3.25 10.5 4.25C9.75 3.25 8.5 2.5 7.25 2.5C5.5 2.5 3.5 3.75 3.5 6.25C3.5 8.75 10.5 15 10.5 15S17.5 8.75 17.5 6.25Z"
+            stroke="#000"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+    </div>
+    <div class="product-info">
+      <div class="brand">${brand}</div>
+      <div class="product-name">${name}</div>
+      <div class="price">${price}원</div>
+      ${discountHTML ? `<div class="coupon">${discountHTML}</div>` : ""}
+    </div>
+  `;
+
+  // 좋아요 버튼 이벤트
+  const likeBtn = card.querySelector(".like-btn");
+  likeBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const heartIcon = likeBtn.querySelector("svg path");
+    if (heartIcon.style.fill === "red") {
+      heartIcon.style.fill = "none";
+      heartIcon.style.stroke = "#000";
+    } else {
+      heartIcon.style.fill = "red";
+      heartIcon.style.stroke = "red";
+    }
+    likeBtn.style.transform = "scale(1.2)";
+    setTimeout(() => {
+      likeBtn.style.transform = "scale(1)";
+    }, 200);
+  });
+
+  // 제품 카드 클릭 이벤트
+  card.addEventListener("click", (e) => {
+    if (e.target.closest(".like-btn")) return;
+    const productId = card.dataset.productId;
+    if (productId) {
+      window.location.href = `../Detail/navigation.html?product_id=${productId}`;
+    } else {
+      window.location.href = "../Detail/navigation.html";
+    }
+  });
+
+  return card;
+}
+
+// 로컬 스토리지에서 유저 정보 가져오기 (메인 페이지와 동일)
+function getUserFromStorage() {
+  try {
+    const stored = localStorage.getItem("fitpl_user");
+    return stored ? JSON.parse(stored) : null;
+  } catch (e) {
+    console.error("로컬 스토리지 파싱 오류:", e);
+    return null;
+  }
+}
+
 // DOM 요소 선택
 const tabButtons = document.querySelectorAll(".tab-btn");
 const weatherTags = document.querySelectorAll(".weather-tag");
@@ -11,7 +458,6 @@ const logoutBtn = document.querySelector(".logout-btn");
 // FITPL 버튼 클릭 이벤트
 if (logoutBtn) {
   logoutBtn.addEventListener("click", function () {
-    // fitpl-website로 이동
     window.location.href = "../fitpl-website/index.html";
   });
 }
@@ -60,37 +506,6 @@ snapTags.forEach((tag) => {
   });
 });
 
-// 위치 태그 전환 기능
-locationTags.forEach((tag) => {
-  tag.addEventListener("click", (e) => {
-    const location = e.target.dataset.location;
-
-    // location이 있을 때만 페이지 이동
-    if (location) {
-      navigateToLocation(location);
-    } else {
-      // +더보기 등의 경우에만 기본 동작
-      const section = e.target.closest("section");
-      const sectionLocationTags = section.querySelectorAll(".location-tag");
-      switchTab(e.target, sectionLocationTags);
-    }
-  });
-});
-
-// 위치별 페이지 이동 함수
-function navigateToLocation(location) {
-  const locationMap = {
-    fukuoka: "../Detailpage/index.html",
-    tokyo: "../Tokyo/index.html",
-    osaka: "../Osaka/index.html",
-  };
-
-  const url = locationMap[location];
-  if (url) {
-    window.location.href = url;
-  }
-}
-
 // 좋아요 버튼 토글 기능
 likeButtons.forEach((button) => {
   button.addEventListener("click", (e) => {
@@ -105,7 +520,6 @@ likeButtons.forEach((button) => {
       heartIcon.style.stroke = "red";
     }
 
-    // 애니메이션 효과
     button.style.transform = "scale(1.2)";
     setTimeout(() => {
       button.style.transform = "scale(1)";
@@ -170,7 +584,6 @@ function createProductCard(product, sectionType) {
   const card = document.createElement("div");
   card.className = "product-card";
 
-  // SNAP 섹션의 경우 product-info를 제외
   const productInfoHTML =
     sectionType === "snap"
       ? ""
@@ -200,13 +613,11 @@ function createProductCard(product, sectionType) {
     ${productInfoHTML}
   `;
 
-  // 좋아요 버튼 이벤트 리스너 추가
   const likeBtn = card.querySelector(".like-btn");
   likeBtn.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
     const heartIcon = likeBtn.querySelector("svg path");
-
     if (heartIcon.style.fill === "red") {
       heartIcon.style.fill = "none";
       heartIcon.style.stroke = "#000";
@@ -214,19 +625,15 @@ function createProductCard(product, sectionType) {
       heartIcon.style.fill = "red";
       heartIcon.style.stroke = "red";
     }
-
     likeBtn.style.transform = "scale(1.2)";
     setTimeout(() => {
       likeBtn.style.transform = "scale(1)";
     }, 200);
   });
 
-  // SNAP 섹션이 아닌 경우에만 상품 카드 클릭 이벤트 추가
   if (sectionType !== "snap") {
     card.addEventListener("click", (e) => {
-      if (e.target.closest(".like-btn")) {
-        return;
-      }
+      if (e.target.closest(".like-btn")) return;
       window.location.href = "../Detail/navigation.html";
     });
   }
@@ -242,7 +649,6 @@ const sectionProductIndices = {
   snap: 0,
 };
 
-// 섹션별 초기 상품 개수 저장
 const sectionInitialCounts = {
   weather: 9,
   activity: 6,
@@ -250,7 +656,6 @@ const sectionInitialCounts = {
   snap: 9,
 };
 
-// 섹션별 추가된 상품 카드 추적 (닫기 버튼을 위한 참조)
 const sectionAddedCards = {
   weather: [],
   activity: [],
@@ -258,7 +663,6 @@ const sectionAddedCards = {
   snap: [],
 };
 
-// 섹션 타입 가져오기 함수
 function getSectionType(section) {
   if (section.id === "weather-section") return "weather";
   if (section.id === "activity-section") return "activity";
@@ -267,13 +671,9 @@ function getSectionType(section) {
   return null;
 }
 
-// 닫기 버튼 생성 함수
 function createCloseButton(section, sectionType) {
-  // 기존 닫기 버튼이 있으면 제거
   const existingCloseBtn = section.querySelector(".close-btn");
-  if (existingCloseBtn) {
-    existingCloseBtn.remove();
-  }
+  if (existingCloseBtn) existingCloseBtn.remove();
 
   const closeBtn = document.createElement("button");
   closeBtn.className = "close-btn";
@@ -281,143 +681,94 @@ function createCloseButton(section, sectionType) {
 
   closeBtn.addEventListener("click", (e) => {
     e.preventDefault();
-
-    // 닫기 버튼 애니메이션
     closeBtn.style.transform = "translateY(-2px)";
     closeBtn.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.2)";
-
     setTimeout(() => {
       closeBtn.style.transform = "translateY(0)";
       closeBtn.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.1)";
     }, 200);
 
-    // 추가된 상품 카드들 제거
     const addedCards = sectionAddedCards[sectionType];
-    addedCards.forEach((card) => {
-      card.remove();
-    });
-
-    // 추가된 카드 배열 초기화
+    addedCards.forEach((card) => card.remove());
     sectionAddedCards[sectionType] = [];
-
-    // 인덱스 초기화
     sectionProductIndices[sectionType] = 0;
-
-    // 닫기 버튼 제거
     closeBtn.remove();
 
-    // 더보기 버튼 다시 표시
     const moreBtn = section.querySelector(".more-btn");
-    if (moreBtn) {
-      moreBtn.style.display = "flex";
-    }
-
-    // 섹션 상단으로 부드럽게 스크롤
+    if (moreBtn) moreBtn.style.display = "flex";
     section.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
   return closeBtn;
 }
 
-// 더보기 버튼 기능
 moreButtons.forEach((button) => {
   button.addEventListener("click", (e) => {
     e.preventDefault();
-
-    // 더보기 버튼 애니메이션
     button.style.transform = "translateY(-2px)";
     button.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.2)";
-
     setTimeout(() => {
       button.style.transform = "translateY(0)";
       button.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.1)";
     }, 200);
 
-    // 부모 섹션 찾기
     const section = button.closest("section");
     if (!section) return;
 
-    // 섹션 타입 가져오기
     const sectionType = getSectionType(section);
     if (!sectionType) return;
 
-    // 해당 섹션의 product-grid 찾기
     const productGrid = section.querySelector(".product-grid");
     if (!productGrid) return;
 
-    // 추가할 상품 가져오기 (한 번에 9개씩 - 3*3줄)
     const products = additionalProducts[sectionType];
     const currentIndex = sectionProductIndices[sectionType];
     const productsToAdd = products.slice(currentIndex, currentIndex + 9);
 
     if (productsToAdd.length === 0) {
-      // 더 이상 추가할 상품이 없으면 버튼 숨기기 또는 비활성화
       button.style.display = "none";
       return;
     }
 
-    // 상품 카드 추가
     productsToAdd.forEach((product) => {
       const card = createProductCard(product, sectionType);
       productGrid.appendChild(card);
-      // 추가된 카드 추적
       sectionAddedCards[sectionType].push(card);
     });
 
-    // 인덱스 업데이트
     sectionProductIndices[sectionType] += productsToAdd.length;
-
-    // 더보기 버튼 숨기기
     button.style.display = "none";
 
-    // 닫기 버튼 추가
     const closeBtn = createCloseButton(section, sectionType);
     section.appendChild(closeBtn);
   });
 });
 
-// 상품 카드 클릭 이벤트
 const productCards = document.querySelectorAll(".product-card");
 productCards.forEach((card) => {
-  // SNAP 섹션의 카드인지 확인
   const isSnapCard = card.closest(".snap-section");
-
-  // SNAP 섹션이 아닌 경우에만 클릭 이벤트 추가
   if (!isSnapCard) {
-    // 클릭 이벤트 - Detail 페이지로 이동
     card.addEventListener("click", (e) => {
-      // 좋아요 버튼 클릭 시에는 페이지 이동하지 않음
-      if (e.target.closest(".like-btn")) {
-        return;
-      }
-
-      // Detail 페이지로 이동
+      if (e.target.closest(".like-btn")) return;
       window.location.href = "../Detail/navigation.html";
     });
   }
 });
 
-// 새로고침 버튼 기능
 const refreshButtons = document.querySelectorAll(".refresh-btn");
 refreshButtons.forEach((button) => {
   button.addEventListener("click", (e) => {
     e.preventDefault();
-
-    // 회전 애니메이션
     const icon = button.querySelector("svg");
     icon.style.transform = "rotate(360deg)";
     icon.style.transition = "transform 0.5s ease";
-
     setTimeout(() => {
       icon.style.transform = "rotate(0deg)";
     }, 500);
-
-    // 실제로는 날씨 정보를 새로고침하는 API 호출이 들어갈 수 있습니다
     console.log("날씨 정보 새로고침");
   });
 });
 
-// 스크롤 시 네비게이션 바 스타일 변경
 window.addEventListener("scroll", () => {
   const topNav = document.querySelector(".top-nav");
   if (window.scrollY > 50) {
@@ -427,114 +778,22 @@ window.addEventListener("scroll", () => {
   }
 });
 
-// 상품 이미지 로딩 시 플레이스홀더 효과
-const productImages = document.querySelectorAll(".product-image");
-productImages.forEach((image) => {
-  image.addEventListener("load", () => {
-    // 이미지 로딩 완료 처리
-  });
-});
-
-// 키보드 네비게이션 지원
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Tab") {
-    // 포커스 가능한 요소들에 대한 키보드 네비게이션
-    const focusableElements = document.querySelectorAll(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    );
-
-    focusableElements.forEach((element) => {
-      element.addEventListener("focus", () => {
-        element.style.outline = "2px solid #245eff";
-        element.style.outlineOffset = "2px";
-      });
-
-      element.addEventListener("blur", () => {
-        element.style.outline = "none";
-      });
-    });
-  }
-});
-
-// 모바일 터치 이벤트 지원
-if ("ontouchstart" in window) {
-  // 모바일 터치 이벤트는 제거됨
-}
-
-// 로딩 상태 표시 함수
-function showLoading(element) {
-  element.style.opacity = "0.5";
-  element.style.pointerEvents = "none";
-
-  // 로딩 스피너 생성
-  const spinner = document.createElement("div");
-  spinner.className = "loading-spinner";
-  spinner.innerHTML = `
-        <div style="
-            width: 20px;
-            height: 20px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #245eff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        "></div>
-    `;
-
-  element.appendChild(spinner);
-}
-
-function hideLoading(element) {
-  element.style.opacity = "1";
-  element.style.pointerEvents = "auto";
-
-  const spinner = element.querySelector(".loading-spinner");
-  if (spinner) {
-    spinner.remove();
-  }
-}
-
-// CSS 애니메이션 추가
-const style = document.createElement("style");
-style.textContent = `
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-    
-    .loading-spinner {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 10;
-    }
-`;
-document.head.appendChild(style);
-
-// 현재 스크롤 위치 추적 변수
 let isScrolledToSections = false;
 
-// 섹션을 보여주는 함수 (첫 번째 섹션에서만 스크롤)
 function scrollToSection(sectionId) {
-  // 모든 섹션 숨기기
   const allSections = document.querySelectorAll('section[id$="-section"]');
   allSections.forEach((section) => {
     section.style.display = "none";
   });
 
-  // 선택된 섹션 보이기
   const targetSection = document.getElementById(sectionId);
   if (targetSection) {
     targetSection.style.display = "block";
 
-    // 첫 번째 섹션(날씨별 추천)에서만 스크롤
     if (!isScrolledToSections) {
-      // 히어로 섹션 다음으로 스크롤 (네비게이션 바가 보이도록 조정)
       const heroSection = document.querySelector(".hero-section");
       const topNav = document.querySelector(".top-nav");
       if (heroSection && topNav) {
-        // 히어로 섹션 끝에서 네비게이션 바 높이만큼 빼서 스크롤
         const scrollPosition =
           heroSection.offsetTop +
           heroSection.offsetHeight -
@@ -549,22 +808,15 @@ function scrollToSection(sectionId) {
     }
   }
 
-  // 모든 탭의 활성 상태 업데이트
   updateAllTabStates(sectionId);
 }
 
-// 모든 탭의 활성 상태 업데이트
 function updateAllTabStates(sectionId) {
-  // 모든 섹션의 탭 버튼들 찾기
   const allSectionTabs = document.querySelectorAll(".section-tabs");
-
   allSectionTabs.forEach((sectionTabs) => {
     const tabButtons = sectionTabs.querySelectorAll(".tab-btn");
-
     tabButtons.forEach((button) => {
       button.classList.remove("active");
-
-      // 클릭된 섹션에 해당하는 버튼에 active 클래스 추가
       const onclickAttr = button.getAttribute("onclick");
       if (onclickAttr && onclickAttr.includes(sectionId)) {
         button.classList.add("active");
@@ -573,9 +825,7 @@ function updateAllTabStates(sectionId) {
   });
 }
 
-// 각 섹션의 네비게이터 바 활성 상태 초기화
 function initializeSectionNavBars() {
-  // 활동별 추천 섹션의 네비게이터 바
   const activitySection = document.getElementById("activity-section");
   if (activitySection) {
     const activityNavTabs = activitySection.querySelector(".section-tabs");
@@ -590,7 +840,6 @@ function initializeSectionNavBars() {
     }
   }
 
-  // 사진용 추천 섹션의 네비게이터 바
   const photoSection = document.getElementById("photo-section");
   if (photoSection) {
     const photoNavTabs = photoSection.querySelector(".section-tabs");
@@ -605,7 +854,6 @@ function initializeSectionNavBars() {
     }
   }
 
-  // 스냅 코디 섹션의 네비게이터 바
   const snapSection = document.getElementById("snap-section");
   if (snapSection) {
     const snapNavTabs = snapSection.querySelector(".section-tabs");
@@ -621,87 +869,33 @@ function initializeSectionNavBars() {
   }
 }
 
-// 스크롤 후에도 각 섹션의 네비게이터 바 상태 유지
-function maintainSectionNavBarStates() {
-  // 활동별 추천 섹션의 네비게이터 바 상태 유지
-  const activitySection = document.getElementById("activity-section");
-  if (activitySection) {
-    const activityNavTabs = activitySection.querySelector(".section-tabs");
-    if (activityNavTabs) {
-      const tabButtons = activityNavTabs.querySelectorAll(".tab-btn");
-      tabButtons.forEach((button) => {
-        if (button.textContent.trim() === "활동별 추천") {
-          button.classList.add("active");
-        } else {
-          button.classList.remove("active");
-        }
-      });
-    }
-  }
-
-  // 사진용 추천 섹션의 네비게이터 바 상태 유지
-  const photoSection = document.getElementById("photo-section");
-  if (photoSection) {
-    const photoNavTabs = photoSection.querySelector(".section-tabs");
-    if (photoNavTabs) {
-      const tabButtons = photoNavTabs.querySelectorAll(".tab-btn");
-      tabButtons.forEach((button) => {
-        if (button.textContent.trim() === "사진용 추천") {
-          button.classList.add("active");
-        } else {
-          button.classList.remove("active");
-        }
-      });
-    }
-  }
-
-  // 스냅 코디 섹션의 네비게이터 바 상태 유지
-  const snapSection = document.getElementById("snap-section");
-  if (snapSection) {
-    const snapNavTabs = snapSection.querySelector(".section-tabs");
-    if (snapNavTabs) {
-      const tabButtons = snapNavTabs.querySelectorAll(".tab-btn");
-      tabButtons.forEach((button) => {
-        if (button.textContent.trim() === "SNAP 코디") {
-          button.classList.add("active");
-        } else {
-          button.classList.remove("active");
-        }
-      });
-    }
-  }
-}
-
-// 페이지 로드 완료 시 초기화
 document.addEventListener("DOMContentLoaded", () => {
   console.log("페이지 로드 완료");
 
-  // 스크롤 상태 초기화
-  isScrolledToSections = false;
+  // 페이지 내용 동적 업데이트
+  updatePageContent();
 
-  // 각 섹션의 네비게이터 바 초기화
+  // 초기 제품 로드
+  const config = getCurrentCountryConfig();
+
+  // URL에서 region_id 확인, 없으면 기본 regionId 사용
+  const params = new URLSearchParams(window.location.search);
+  const regionId = params.get("region_id");
+  const initialRegionId = regionId ? parseInt(regionId) : config.regionId;
+
+  loadProductsForRegion(initialRegionId);
+
+  isScrolledToSections = false;
   initializeSectionNavBars();
 
-  // 초기 활성 상태 설정
   const activeTabs = document.querySelectorAll(".tab-btn.active");
-  const activeWeatherTags = document.querySelectorAll(".weather-tag.active");
-  const activeActivityTags = document.querySelectorAll(".activity-tag.active");
-  const activeSnapTags = document.querySelectorAll(".snap-tag.active");
-  const activeLocationTags = document.querySelectorAll(".location-tag.active");
-
   console.log(`활성 탭: ${activeTabs.length}개`);
-  console.log(`활성 날씨 태그: ${activeWeatherTags.length}개`);
-  console.log(`활성 액티비티 태그: ${activeActivityTags.length}개`);
-  console.log(`활성 스냅 태그: ${activeSnapTags.length}개`);
-  console.log(`활성 위치 태그: ${activeLocationTags.length}개`);
 });
 
-// 에러 처리
 window.addEventListener("error", (e) => {
   console.error("JavaScript 에러:", e.error);
 });
 
-// 성능 모니터링
 window.addEventListener("load", () => {
   const loadTime = performance.now();
   console.log(`페이지 로드 시간: ${loadTime.toFixed(2)}ms`);

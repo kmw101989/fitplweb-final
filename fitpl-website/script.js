@@ -1390,6 +1390,12 @@ document.addEventListener("DOMContentLoaded", () => {
             }
           );
 
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error("서버 응답 오류:", response.status, errorText);
+            throw new Error(`서버 오류: ${response.status} - ${errorText}`);
+          }
+
           const result = await response.json();
 
           if (result.ok) {
@@ -1421,7 +1427,22 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         } catch (error) {
           console.error("전송 오류:", error);
-          alert(`전송 오류: ${error.message}`);
+          console.error("에러 상세:", {
+            message: error.message,
+            name: error.name,
+            stack: error.stack,
+          });
+
+          // 사용자 친화적인 에러 메시지
+          let errorMessage = "정보 전송 중 오류가 발생했습니다.";
+          if (error.message.includes("fetch")) {
+            errorMessage +=
+              "\n\n네트워크 연결을 확인해주세요. 또는 잠시 후 다시 시도해주세요.";
+          } else if (error.message.includes("서버 오류")) {
+            errorMessage = error.message;
+          }
+
+          alert(errorMessage);
         }
       }
 
@@ -1802,12 +1823,11 @@ function renderProductsWithSections(
   );
 }
 
-// 게스트 추천 제품 로드 및 표시
-async function loadAndRenderGuestProducts() {
+// 게스트 추천 제품 로드
+async function loadGuestProducts() {
   const base = "/.netlify/functions/db";
 
   try {
-    // 기후 추천과 활동 추천을 동시에 가져오기
     const [climateRes, activityRes] = await Promise.all([
       fetch(`${base}?op=guest_reco_climate`),
       fetch(`${base}?op=guest_reco_activity`),
@@ -1816,50 +1836,106 @@ async function loadAndRenderGuestProducts() {
     const climateData = await climateRes.json();
     const activityData = await activityRes.json();
 
-    // 데이터 추출 (rows 또는 data.rows)
-    const climateProducts = climateData?.rows || climateData?.data?.rows || [];
-    const activityProducts =
-      activityData?.rows || activityData?.data?.rows || [];
-
-    // 기후 추천 섹션 렌더링 (첫 번째 .celebrity-pick)
-    const climateSection = document.querySelector(
-      ".celebrity-pick:not(#climate-recommendation)"
-    );
-    if (climateSection) {
-      const climateContainer = climateSection.querySelector(
-        ".products-grid-container"
-      );
-      if (climateContainer) {
-        renderProductsWithSections(
-          ".celebrity-pick:not(#climate-recommendation) .products-grid-container",
-          climateProducts,
-          10
-        );
-      }
-    }
-
-    // 활동 추천 섹션 렌더링 (#climate-recommendation)
-    const activitySection = document.getElementById("climate-recommendation");
-    if (activitySection) {
-      const activityContainer = activitySection.querySelector(
-        ".products-grid-container"
-      );
-      if (activityContainer) {
-        renderProductsWithSections(
-          "#climate-recommendation .products-grid-container",
-          activityProducts,
-          10
-        );
-      }
-    }
-
-    console.log("게스트 추천 제품 로드 완료:", {
-      climate: climateProducts.length,
-      activity: activityProducts.length,
-    });
+    return {
+      climate: climateData?.rows || climateData?.data?.rows || [],
+      activity: activityData?.rows || activityData?.data?.rows || [],
+    };
   } catch (error) {
-    console.error("제품 로드 실패:", error);
+    console.error("게스트 추천 로드 실패:", error);
+    return { climate: [], activity: [] };
   }
+}
+
+// 유저 추천 제품 로드
+async function loadUserProducts(userId) {
+  const base = "/.netlify/functions/db";
+
+  if (!userId) {
+    return { climate: [], activity: [] };
+  }
+
+  try {
+    const [climateRes, activityRes] = await Promise.all([
+      fetch(`${base}?op=user_country_climate_top&user_id=${userId}&limit=20`),
+      fetch(`${base}?op=user_country_activity_top&user_id=${userId}&limit=20`),
+    ]);
+
+    const climateData = await climateRes.json();
+    const activityData = await activityRes.json();
+
+    return {
+      climate: climateData?.rows || climateData?.data?.rows || [],
+      activity: activityData?.rows || activityData?.data?.rows || [],
+    };
+  } catch (error) {
+    console.error("유저 추천 로드 실패:", error);
+    return { climate: [], activity: [] };
+  }
+}
+
+// 제품 로드 및 표시 (게스트/유저 자동 판별)
+async function loadAndRenderProducts() {
+  const user = getUserFromStorage();
+  let products;
+
+  if (user && user.user_id) {
+    // 유저가 있는 경우: 유저 추천 사용
+    console.log("유저 모드: 유저 추천 로드 중...", user.user_id);
+    products = await loadUserProducts(user.user_id);
+
+    if (products.climate.length === 0 && products.activity.length === 0) {
+      // 유저 추천이 없으면 게스트 추천으로 fallback
+      console.log("유저 추천이 없어 게스트 추천으로 대체");
+      products = await loadGuestProducts();
+    }
+  } else {
+    // 게스트인 경우: 게스트 추천 사용
+    console.log("게스트 모드: 게스트 추천 로드 중...");
+    products = await loadGuestProducts();
+  }
+
+  // 기후 추천 섹션 렌더링 (첫 번째 .celebrity-pick)
+  const climateSection = document.querySelector(
+    ".celebrity-pick:not(#climate-recommendation)"
+  );
+  if (climateSection) {
+    const climateContainer = climateSection.querySelector(
+      ".products-grid-container"
+    );
+    if (climateContainer) {
+      renderProductsWithSections(
+        ".celebrity-pick:not(#climate-recommendation) .products-grid-container",
+        products.climate,
+        10
+      );
+    }
+  }
+
+  // 활동 추천 섹션 렌더링 (#climate-recommendation)
+  const activitySection = document.getElementById("climate-recommendation");
+  if (activitySection) {
+    const activityContainer = activitySection.querySelector(
+      ".products-grid-container"
+    );
+    if (activityContainer) {
+      renderProductsWithSections(
+        "#climate-recommendation .products-grid-container",
+        products.activity,
+        10
+      );
+    }
+  }
+
+  console.log("제품 로드 완료:", {
+    mode: user ? "유저" : "게스트",
+    climate: products.climate.length,
+    activity: products.activity.length,
+  });
+}
+
+// 기존 함수명 유지 (하위 호환성)
+async function loadAndRenderGuestProducts() {
+  return loadAndRenderProducts();
 }
 
 // 페이지 로드 시 제품 표시

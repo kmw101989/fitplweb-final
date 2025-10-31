@@ -13,19 +13,59 @@ async function fetchBridge(pathWithQuery, method = "GET", payload = null) {
   const url = `${BRIDGE_URL}${pathWithQuery}`;
   const headers = { Authorization: `Bearer ${BRIDGE_TOKEN}` };
   if (payload) headers["Content-Type"] = "application/json";
-  const r = await fetch(url, {
-    method,
-    headers,
-    body: payload ? JSON.stringify(payload) : undefined,
-  });
-  return r.json();
+
+  try {
+    const r = await fetch(url, {
+      method,
+      headers,
+      body: payload ? JSON.stringify(payload) : undefined,
+      // 타임아웃 설정 (30초)
+      signal: AbortSignal.timeout(30000),
+    });
+
+    if (!r.ok) {
+      const errorText = await r.text().catch(() => "");
+      console.error(`Bridge error: ${r.status} ${r.statusText}`, errorText);
+      throw new Error(`Bridge server error: ${r.status} - ${errorText}`);
+    }
+
+    return r.json();
+  } catch (err) {
+    console.error("fetchBridge error:", {
+      url,
+      method,
+      error: err.message,
+      name: err.name,
+    });
+
+    // 타임아웃 또는 네트워크 에러
+    if (err.name === "AbortError" || err.name === "TypeError") {
+      throw new Error(
+        `Cannot reach bridge server at ${BRIDGE_URL}. Check if server is running and accessible.`
+      );
+    }
+
+    throw err;
+  }
 }
 
 export const handler = async (event) => {
   try {
+    // 환경 변수 확인 및 로깅 (민감한 정보 제외)
     if (!BRIDGE_URL || !BRIDGE_TOKEN) {
+      console.error("Missing environment variables:", {
+        hasBridgeUrl: !!BRIDGE_URL,
+        hasBridgeToken: !!BRIDGE_TOKEN,
+      });
       return json(500, { ok: false, error: "Missing BRIDGE_URL/BRIDGE_TOKEN" });
     }
+
+    // 디버깅을 위한 로그 (프로덕션에서는 제거 가능)
+    console.log("Function called:", {
+      op: event.queryStringParameters?.op,
+      hasBridgeUrl: !!BRIDGE_URL,
+      bridgeUrlHost: BRIDGE_URL ? new URL(BRIDGE_URL).hostname : null,
+    });
 
     const u = new URL(event.rawUrl);
     const op = u.searchParams.get("op") || "ping";
@@ -100,13 +140,51 @@ export const handler = async (event) => {
     const qs = u.search || "";
     const url = `${BRIDGE_URL}${basePath}${qs}`;
 
-    const r = await fetch(url, {
-      headers: { Authorization: `Bearer ${BRIDGE_TOKEN}` },
-    });
+    try {
+      const r = await fetch(url, {
+        headers: { Authorization: `Bearer ${BRIDGE_TOKEN}` },
+        signal: AbortSignal.timeout(30000), // 30초 타임아웃
+      });
 
-    const data = await r.json().catch(() => ({}));
-    return json(r.ok ? 200 : 502, data);
+      if (!r.ok) {
+        const errorText = await r.text().catch(() => "");
+        console.error(`Bridge fetch error: ${r.status}`, errorText);
+        return json(502, {
+          ok: false,
+          error: `Bridge server returned ${r.status}: ${errorText}`,
+          details: "Check if bridge server is running and accessible",
+        });
+      }
+
+      const data = await r.json().catch(() => ({}));
+      return json(200, data);
+    } catch (fetchErr) {
+      console.error("Fetch error:", {
+        url,
+        error: fetchErr.message,
+        name: fetchErr.name,
+      });
+
+      // 타임아웃 또는 네트워크 에러
+      if (fetchErr.name === "AbortError" || fetchErr.name === "TypeError") {
+        return json(503, {
+          ok: false,
+          error: `Cannot reach bridge server: ${fetchErr.message}`,
+          details: `Check if ${BRIDGE_URL} is accessible and running`,
+        });
+      }
+
+      throw fetchErr;
+    }
   } catch (err) {
-    return json(500, { ok: false, error: String(err?.message || err) });
+    console.error("Handler error:", {
+      error: err.message,
+      stack: err.stack,
+    });
+    return json(500, {
+      ok: false,
+      error: String(err?.message || err),
+      details: "Internal function error",
+    });
   }
 };

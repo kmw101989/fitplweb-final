@@ -189,9 +189,93 @@ function addProductCardEventListeners() {
   });
 }
 
+// 랭킹 제품 로드 (API)
+async function loadRankingProducts() {
+  const base = "/.netlify/functions/db";
+
+  try {
+    const response = await fetch(
+      `${base}?op=product_ranking&limit=60&order=monthly_views_desc`
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    const products = data?.rows || data?.data?.rows || [];
+
+    if (products.length > 0) {
+      renderProductsFromAPI(products);
+    } else {
+      console.warn("제품 데이터가 없어 기본 렌더링 사용");
+      renderProducts();
+    }
+  } catch (error) {
+    console.error("랭킹 제품 로드 실패:", error);
+    // 실패 시 기본 렌더링 사용
+    renderProducts();
+  }
+}
+
+// API 데이터로 제품 렌더링 (랭킹용 - rank-number 포함)
+function renderProductsFromAPI(products) {
+  const productsGrid = document.querySelector(".products-grid");
+  if (!productsGrid) return;
+
+  productsGrid.innerHTML = products
+    .map((product, index) => {
+      const rank = index + 1;
+      const price = Number(product.price || 0).toLocaleString();
+      const name = (product.product_name || "").replace(/\s+/g, " ").trim();
+      const brand = product.brand || "";
+      const imgUrl =
+        product.img_url ||
+        "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=260&h=312&fit=crop";
+      const discountRate = product.discount_rate
+        ? Math.round(product.discount_rate)
+        : null;
+
+      return `
+      <div class="product-card" data-product-id="${product.product_id || ""}">
+        <div class="product-image">
+          <div class="rank-number">${rank}</div>
+          <img src="${imgUrl}" alt="${name}" loading="lazy" />
+          <button class="like-btn">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path
+                d="M10 17L8.5 15.5C3.5 10.5 0 7.5 0 5C0 2.5 2.5 0 5 0C6.5 0 8 0.5 9 1.5C10 0.5 11.5 0 13 0C15.5 0 18 2.5 18 5C18 7.5 14.5 10.5 9.5 15.5L10 17Z"
+                stroke="#666"
+                stroke-width="2"
+              />
+            </svg>
+          </button>
+        </div>
+        <div class="product-info">
+          <div class="brand">${brand}</div>
+          <div class="product-name">${name}</div>
+          <div class="price-info">
+            ${
+              discountRate > 0
+                ? `<span class="discount">${discountRate}%</span>`
+                : ""
+            }
+            <span class="price">${price}원</span>
+          </div>
+        </div>
+      </div>
+    `;
+    })
+    .join("");
+
+  // 동적으로 생성된 상품 카드에 클릭 이벤트 추가
+  addProductCardEventListeners();
+}
+
 // 페이지 로드 시 상품 렌더링
 document.addEventListener("DOMContentLoaded", function () {
-  renderProducts();
+  // API에서 랭킹 제품 로드
+  loadRankingProducts();
 
   // 정적 HTML 상품 카드들에도 클릭 이벤트 추가
   addStaticProductCardEventListeners();

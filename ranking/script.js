@@ -192,21 +192,30 @@ function addProductCardEventListeners() {
 // 랭킹 제품 로드 (API)
 async function loadRankingProducts() {
   const base = "/.netlify/functions/db";
+  const url = `${base}?op=product_ranking&limit=60&order=monthly_views_desc`;
 
   try {
-    const response = await fetch(
-      `${base}?op=product_ranking&limit=60&order=monthly_views_desc`
-    );
+    console.log("[랭킹] API 호출:", url);
+    const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      const errorText = await response.text().catch(() => "");
+      console.error(`[랭킹] HTTP 에러 ${response.status}:`, errorText);
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
     }
 
     const data = await response.json();
+    console.log("[랭킹] 응답:", {
+      ok: data?.ok,
+      rows: data?.rows?.length || 0,
+      error: data?.error,
+    });
+
     const products = data?.rows || data?.data?.rows || [];
 
     if (products.length > 0) {
       renderProductsFromAPI(products);
+      console.log(`[랭킹] ${products.length}개 제품 렌더링 완료`);
     } else {
       console.warn("제품 데이터가 없어 기본 렌더링 사용");
       renderProducts();

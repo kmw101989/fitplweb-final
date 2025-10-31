@@ -1828,13 +1828,40 @@ async function loadGuestProducts() {
   const base = "/.netlify/functions/db";
 
   try {
+    console.log("[게스트 추천] API 호출 시작");
     const [climateRes, activityRes] = await Promise.all([
       fetch(`${base}?op=guest_reco_climate`),
       fetch(`${base}?op=guest_reco_activity`),
     ]);
 
+    if (!climateRes.ok) {
+      console.error(`[게스트 추천] 기후 API 실패: ${climateRes.status}`);
+    }
+    if (!activityRes.ok) {
+      console.error(`[게스트 추천] 활동 API 실패: ${activityRes.status}`);
+    }
+
     const climateData = await climateRes.json();
     const activityData = await activityRes.json();
+
+    console.log("[게스트 추천] 응답 상세:", {
+      climate: {
+        ok: climateData?.ok,
+        count: climateData?.count,
+        rowsLength: climateData?.rows?.length || 0,
+        hasRows: !!climateData?.rows,
+        error: climateData?.error,
+        fullResponse: climateData,
+      },
+      activity: {
+        ok: activityData?.ok,
+        count: activityData?.count,
+        rowsLength: activityData?.rows?.length || 0,
+        hasRows: !!activityData?.rows,
+        error: activityData?.error,
+        fullResponse: activityData,
+      },
+    });
 
     return {
       climate: climateData?.rows || climateData?.data?.rows || [],
@@ -1860,8 +1887,40 @@ async function loadUserProducts(userId) {
       fetch(`${base}?op=user_country_activity_top&user_id=${userId}&limit=20`),
     ]);
 
+    if (!climateRes.ok) {
+      const errorText = await climateRes.text().catch(() => "");
+      console.error(
+        `[유저 추천] 기후 API 실패: ${climateRes.status}`,
+        errorText
+      );
+    }
+    if (!activityRes.ok) {
+      const errorText = await activityRes.text().catch(() => "");
+      console.error(
+        `[유저 추천] 활동 API 실패: ${activityRes.status}`,
+        errorText
+      );
+    }
+
     const climateData = await climateRes.json();
     const activityData = await activityRes.json();
+
+    console.log("[유저 추천] 응답 상세:", {
+      climate: {
+        ok: climateData?.ok,
+        count: climateData?.count,
+        rowsLength: climateData?.rows?.length || 0,
+        hasRows: !!climateData?.rows,
+        error: climateData?.error,
+      },
+      activity: {
+        ok: activityData?.ok,
+        count: activityData?.count,
+        rowsLength: activityData?.rows?.length || 0,
+        hasRows: !!activityData?.rows,
+        error: activityData?.error,
+      },
+    });
 
     return {
       climate: climateData?.rows || climateData?.data?.rows || [],

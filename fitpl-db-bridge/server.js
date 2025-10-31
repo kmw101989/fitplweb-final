@@ -106,10 +106,17 @@ app.get("/guest_reco_climate", async (req, res) => {
     query += ` ORDER BY base_score DESC, src_priority ASC, product_id ASC LIMIT ?`;
     params.push(limit);
 
+    console.log("[guest_reco_climate] 쿼리 실행:", query);
+    console.log("[guest_reco_climate] 파라미터:", params);
+
     const [rows] = await pool.query(query, params);
+
+    console.log(`[guest_reco_climate] 결과: ${rows.length}개 행 반환`);
+
     res.json({ ok: true, count: rows.length, rows });
   } catch (err) {
-    console.error("guest_reco_climate error:", err);
+    console.error("[guest_reco_climate] 에러:", err.message);
+    console.error("[guest_reco_climate] 스택:", err.stack);
     res.status(500).json({ ok: false, error: String(err.message) });
   }
 });
@@ -139,10 +146,17 @@ app.get("/guest_reco_activity", async (req, res) => {
     query += ` ORDER BY base_score DESC, src_priority ASC, product_id ASC LIMIT ?`;
     params.push(limit);
 
+    console.log("[guest_reco_activity] 쿼리 실행:", query);
+    console.log("[guest_reco_activity] 파라미터:", params);
+
     const [rows] = await pool.query(query, params);
+
+    console.log(`[guest_reco_activity] 결과: ${rows.length}개 행 반환`);
+
     res.json({ ok: true, count: rows.length, rows });
   } catch (err) {
-    console.error("guest_reco_activity error:", err);
+    console.error("[guest_reco_activity] 에러:", err.message);
+    console.error("[guest_reco_activity] 스택:", err.stack);
     res.status(500).json({ ok: false, error: String(err.message) });
   }
 });
@@ -159,16 +173,22 @@ app.get("/user_country_climate_top", async (req, res) => {
     if (!user_id)
       return res.status(400).json({ ok: false, error: "user_id required" });
 
-    const [rows] = await pool.query(
-      `SELECT *
-         FROM v_country_climate_top20_products
-        WHERE user_id = ?
-        LIMIT ?`,
-      [user_id, limit]
+    const sql = `SELECT * FROM v_country_climate_top20_products WHERE user_id = ? LIMIT ?`;
+    const params = [user_id, limit];
+
+    console.log("[user_country_climate_top] 쿼리 실행:", sql);
+    console.log("[user_country_climate_top] 파라미터:", params);
+
+    const [rows] = await pool.query(sql, params);
+
+    console.log(
+      `[user_country_climate_top] 결과: ${rows.length}개 행 반환 (user_id: ${user_id})`
     );
+
     res.json({ ok: true, count: rows.length, rows });
   } catch (err) {
-    console.error("user_country_climate_top error:", err);
+    console.error("[user_country_climate_top] 에러:", err.message);
+    console.error("[user_country_climate_top] 스택:", err.stack);
     res.status(500).json({ ok: false, error: String(err.message) });
   }
 });
@@ -185,16 +205,22 @@ app.get("/user_country_activity_top", async (req, res) => {
     if (!user_id)
       return res.status(400).json({ ok: false, error: "user_id required" });
 
-    const [rows] = await pool.query(
-      `SELECT *
-         FROM v_country_activity_top20_products
-        WHERE user_id = ?
-        LIMIT ?`,
-      [user_id, limit]
+    const sql = `SELECT * FROM v_country_activity_top20_products WHERE user_id = ? LIMIT ?`;
+    const params = [user_id, limit];
+
+    console.log("[user_country_activity_top] 쿼리 실행:", sql);
+    console.log("[user_country_activity_top] 파라미터:", params);
+
+    const [rows] = await pool.query(sql, params);
+
+    console.log(
+      `[user_country_activity_top] 결과: ${rows.length}개 행 반환 (user_id: ${user_id})`
     );
+
     res.json({ ok: true, count: rows.length, rows });
   } catch (err) {
-    console.error("user_country_activity_top error:", err);
+    console.error("[user_country_activity_top] 에러:", err.message);
+    console.error("[user_country_activity_top] 스택:", err.stack);
     res.status(500).json({ ok: false, error: String(err.message) });
   }
 });
@@ -274,9 +300,17 @@ app.get("/product_ranking", async (req, res) => {
     `;
     params.push(limit, offset);
 
+    console.log("[product_ranking] 쿼리 실행:", sql);
+    console.log("[product_ranking] 파라미터:", params);
+
     const [rows] = await pool.query(sql, params);
+
+    console.log(`[product_ranking] 결과: ${rows.length}개 행 반환`);
+
     res.json({ ok: true, count: rows.length, rows });
   } catch (err) {
+    console.error("[product_ranking] 에러:", err.message);
+    console.error("[product_ranking] 스택:", err.stack);
     res.status(500).json({ ok: false, error: String(err.message) });
   }
 });
@@ -318,9 +352,17 @@ app.get("/product_sale", async (req, res) => {
     `;
     params.push(limit, offset);
 
+    console.log("[product_sale] 쿼리 실행:", sql);
+    console.log("[product_sale] 파라미터:", params);
+
     const [rows] = await pool.query(sql, params);
+
+    console.log(`[product_sale] 결과: ${rows.length}개 행 반환`);
+
     res.json({ ok: true, count: rows.length, rows });
   } catch (err) {
+    console.error("[product_sale] 에러:", err.message);
+    console.error("[product_sale] 스택:", err.stack);
     res.status(500).json({ ok: false, error: String(err.message) });
   }
 });

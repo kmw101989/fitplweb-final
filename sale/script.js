@@ -132,7 +132,12 @@ function renderProducts() {
   productsGrid.innerHTML = extendedProducts
     .map(
       (product) => `
-      <div class="product-card" data-product-id="${product.id}">
+      <div
+        class="product-card"
+        data-product-id="${product.id}"
+        data-source="static"
+        data-region-id=""
+      >
         <div class="product-image">
           <img src="${product.image}" alt="${product.name}" />
           <button class="like-btn">
@@ -193,20 +198,29 @@ function addProductCardClickHandlers() {
 
     // 상품 카드 클릭 시 상세 페이지로 이동
     card.addEventListener("click", (e) => {
-      // 좋아요 버튼 클릭이 아닌 경우에만 상세 페이지로 이동
       if (!e.target.closest(".like-btn")) {
-        const productId = card.getAttribute("data-product-id") || "1";
-        navigateToDetailPage(productId);
+        const productId = card.getAttribute("data-product-id") || "";
+        const source = card.getAttribute("data-source") || "";
+        const regionId = card.getAttribute("data-region-id") || "";
+        navigateToDetailPage(productId, source, regionId);
       }
     });
   });
 }
 
 // 상세 페이지로 이동하는 함수
-function navigateToDetailPage(productId) {
-  // 상품 정보를 URL 파라미터로 전달
-  const detailUrl = `../Detail/navigation.html?productId=${productId}`;
-  window.location.href = detailUrl;
+function navigateToDetailPage(productId, source, regionId) {
+  if (!productId) {
+    window.location.href = "../Detail/navigation.html";
+    return;
+  }
+
+  const params = new URLSearchParams();
+  params.set("product_id", productId);
+  if (source) params.set("source", source);
+  if (regionId) params.set("region_id", regionId);
+
+  window.location.href = `../Detail/navigation.html?${params.toString()}`;
 }
 
 // 세일 제품 로드 (API)
@@ -266,7 +280,12 @@ function renderProductsFromAPI(products) {
         : null;
 
       return `
-      <div class="product-card" data-product-id="${product.product_id || ""}">
+      <div
+        class="product-card"
+        data-product-id="${product.product_id || ""}"
+        data-source="product_sale"
+        data-region-id="${product.region_id || ""}"
+      >
         <div class="product-image">
           <div class="rank-number">${rank}</div>
           <img src="${imgUrl}" alt="${name}" loading="lazy" />

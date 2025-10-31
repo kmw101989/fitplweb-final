@@ -174,17 +174,26 @@ function addProductCardEventListeners() {
 
     // 상품 카드 클릭 시 상세 페이지로 이동
     card.addEventListener("click", (e) => {
-      // 좋아요 버튼 클릭은 제외
       if (e.target.closest(".like-btn")) {
         return;
       }
 
-      // 상품 ID를 가져와서 상세 페이지로 이동
       const productCard = e.currentTarget;
-      const productId = productCard.getAttribute("data-product-id") || "1";
+      const productId = productCard.getAttribute("data-product-id") || "";
+      const source = productCard.getAttribute("data-source") || "";
+      const regionId = productCard.getAttribute("data-region-id") || "";
 
-      // Detail 페이지로 이동 (상품 ID를 쿼리 파라미터로 전달)
-      window.location.href = `../Detail/navigation.html?id=${productId}`;
+      if (!productId) {
+        window.location.href = "../Detail/navigation.html";
+        return;
+      }
+
+      const params = new URLSearchParams();
+      params.set("product_id", productId);
+      if (source) params.set("source", source);
+      if (regionId) params.set("region_id", regionId);
+
+      window.location.href = `../Detail/navigation.html?${params.toString()}`;
     });
   });
 }
@@ -246,7 +255,12 @@ function renderProductsFromAPI(products) {
         : null;
 
       return `
-      <div class="product-card" data-product-id="${product.product_id || ""}">
+      <div
+        class="product-card"
+        data-product-id="${product.product_id || ""}"
+        data-source="product_ranking"
+        data-region-id="${product.region_id || ""}"
+      >
         <div class="product-image">
           <div class="rank-number">${rank}</div>
           <img src="${imgUrl}" alt="${name}" loading="lazy" />

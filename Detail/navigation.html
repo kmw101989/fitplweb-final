@@ -163,6 +163,7 @@
             <!-- 제품 이미지 -->
             <div class="product-image-section">
               <div class="product-gallery">
+                <div class="thumbnail-strip" id="product-thumbnails" aria-label="상품 썸네일"></div>
 
                 <!-- 메인 이미지 (우측) -->
                 <div class="main-image-container">
@@ -190,23 +191,23 @@
               <div class="product-info-table">
                 <div class="info-row">
                   <span class="info-label">품번</span>
-                  <span class="info-value">SPJPF4TC24</span>
+                  <span class="info-value" data-field="sku">SPJPF4TC24</span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">성별</span>
-                  <span class="info-value">남</span>
+                  <span class="info-value" data-field="gender">남</span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">시즌</span>
-                  <span class="info-value">2025 FW</span>
+                  <span class="info-value" data-field="season">2025 FW</span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">조회수</span>
-                  <span class="info-value">79만 회 이상 (최근 1개월)</span>
+                  <span class="info-value" data-field="views">79만 회 이상 (최근 1개월)</span>
                 </div>
                 <div class="info-row">
                   <span class="info-label">누적판매</span>
-                  <span class="info-value">2만 개 이상</span>
+                  <span class="info-value" data-field="sales">2만 개 이상</span>
                 </div>
               </div>
             </div>
@@ -340,6 +341,10 @@
                 <div class="product-tags">
                   <div class="tag sale-tag">추석빅세일</div>
                   <div class="tag exclusive-tag">무신사단독</div>
+                </div>
+
+                <div class="product-summary" id="product-summary" hidden>
+                  상품 설명이 여기에 표시됩니다.
                 </div>
 
                 <!-- 평점 -->
@@ -496,6 +501,22 @@
           </div>
         </div>
       </div>
+
+      <section
+        class="related-products-section"
+        id="related-products-section"
+        aria-live="polite"
+        hidden
+      >
+        <div class="related-header">
+          <h2>함께 보면 좋은 상품</h2>
+          <p class="related-description">현재 상품과 유사한 추천 아이템입니다.</p>
+        </div>
+        <div class="related-grid" id="related-products-grid"></div>
+        <p class="related-empty" id="related-products-empty" hidden>
+          표시할 추천 상품이 없습니다.
+        </p>
+      </section>
     </main>
 
     <!-- 푸터 -->

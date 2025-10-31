@@ -398,11 +398,28 @@ async function loadSectionProducts(sectionId, userId, type, regionId = null) {
 
     const products = data?.rows || data?.data?.rows || [];
 
-    if (products.length > 0) {
+    const sourceLabel = url.includes("user_country_climate_top")
+      ? "user_country_climate_top"
+      : url.includes("user_country_activity_top")
+      ? "user_country_activity_top"
+      : url.includes("user_country_photo_top")
+      ? "user_country_photo_top"
+      : url.includes("guest_reco_climate")
+      ? "guest_reco_climate"
+      : url.includes("guest_reco_activity")
+      ? "guest_reco_activity"
+      : "";
+
+    const normalizedProducts = products.map((item) => ({
+      ...item,
+      __source: sourceLabel,
+    }));
+
+    if (normalizedProducts.length > 0) {
       // 처음에는 9개만 표시
-      renderProductsToGrid(productGrid, products, 9);
+      renderProductsToGrid(productGrid, normalizedProducts, 9);
       console.log(
-        `[${type}] 성공: ${products.length}개 제품 로드 완료 (user_id: ${userId})`
+        `[${type}] 성공: ${normalizedProducts.length}개 제품 로드 완료 (user_id: ${userId})`
       );
     } else {
       console.warn(`[${type}] 경고: 제품이 없습니다 (user_id: ${userId})`, {
@@ -450,6 +467,11 @@ function createProductCardFromAPI(product) {
   const card = document.createElement("div");
   card.className = "product-card";
   card.dataset.productId = product.product_id || "";
+  card.dataset.source = product.__source || "";
+  const regionIdValue = product.region_id || product.regionId || "";
+  if (regionIdValue) {
+    card.dataset.regionId = regionIdValue;
+  }
 
   const price = Number(product.price || 0).toLocaleString();
   const name = (product.product_name || "").replace(/\s+/g, " ").trim();
@@ -510,8 +532,14 @@ function createProductCardFromAPI(product) {
   card.addEventListener("click", (e) => {
     if (e.target.closest(".like-btn")) return;
     const productId = card.dataset.productId;
+    const source = card.dataset.source;
+    const regionId = card.dataset.regionId;
     if (productId) {
-      window.location.href = `../Detail/navigation.html?product_id=${productId}`;
+      const params = new URLSearchParams();
+      params.set("product_id", productId);
+      if (source) params.set("source", source);
+      if (regionId) params.set("region_id", regionId);
+      window.location.href = `../Detail/navigation.html?${params.toString()}`;
     } else {
       window.location.href = "../Detail/navigation.html";
     }

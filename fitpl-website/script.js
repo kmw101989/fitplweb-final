@@ -1065,13 +1065,9 @@ document.addEventListener("DOMContentLoaded", () => {
     entryPopup.classList.add("show");
     document.body.style.overflow = "hidden";
     document.body.classList.add("popup-open");
-    // 본문 상호작용 비활성화
+    // 본문 상호작용 비활성화 (시각적으로만)
     if (appContainer) {
-      appContainer.classList.add("non-interactive");
       appContainer.setAttribute("aria-hidden", "true");
-      try {
-        appContainer.setAttribute("inert", "");
-      } catch (_) {}
     }
     // 포커스 트랩 시작(닫기 버튼으로 포커스 이동)
     if (entryPopupClose) entryPopupClose.focus();
@@ -1083,9 +1079,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.classList.remove("popup-open");
     // 본문 상호작용 복원
     if (appContainer) {
-      appContainer.classList.remove("non-interactive");
       appContainer.removeAttribute("aria-hidden");
-      appContainer.removeAttribute("inert");
     }
   }
 
@@ -1631,13 +1625,20 @@ function createProductCard(product) {
     ? Math.round(product.discount_rate)
     : null;
   const productUrl = product.product_url || "#";
+  const dataSource = product.__source || "";
+  const dataRegionId = product.region_id || product.regionId || "";
 
   const discountHTML = discountRate
     ? `<span class="discount">${discountRate}%</span>`
     : "";
 
   return `
-    <div class="product-card" data-product-id="${product.product_id || ""}">
+    <div
+      class="product-card"
+      data-product-id="${product.product_id || ""}"
+      data-source="${dataSource}"
+      data-region-id="${dataRegionId}"
+    >
       <div class="product-image">
         <img src="${imgUrl}" alt="${name}" loading="lazy" />
         <button class="like-btn">
@@ -1717,8 +1718,14 @@ function attachProductEvents(container) {
     card.addEventListener("click", (e) => {
       if (e.target.closest(".like-btn")) return;
       const productId = card.dataset.productId;
+      const source = card.dataset.source;
+      const regionId = card.dataset.regionId;
       if (productId) {
-        window.location.href = `../Detail/navigation.html?product_id=${productId}`;
+        const params = new URLSearchParams();
+        params.set("product_id", productId);
+        if (source) params.set("source", source);
+        if (regionId) params.set("region_id", regionId);
+        window.location.href = `../Detail/navigation.html?${params.toString()}`;
       } else {
         window.location.href = "../Detail/navigation.html";
       }
@@ -1863,9 +1870,20 @@ async function loadGuestProducts() {
       },
     });
 
+    const climateRows = (
+      climateData?.rows ||
+      climateData?.data?.rows ||
+      []
+    ).map((row) => ({ ...row, __source: "guest_reco_climate" }));
+    const activityRows = (
+      activityData?.rows ||
+      activityData?.data?.rows ||
+      []
+    ).map((row) => ({ ...row, __source: "guest_reco_activity" }));
+
     return {
-      climate: climateData?.rows || climateData?.data?.rows || [],
-      activity: activityData?.rows || activityData?.data?.rows || [],
+      climate: climateRows,
+      activity: activityRows,
     };
   } catch (error) {
     console.error("게스트 추천 로드 실패:", error);
@@ -1922,9 +1940,20 @@ async function loadUserProducts(userId) {
       },
     });
 
+    const climateRows = (
+      climateData?.rows ||
+      climateData?.data?.rows ||
+      []
+    ).map((row) => ({ ...row, __source: "user_country_climate_top" }));
+    const activityRows = (
+      activityData?.rows ||
+      activityData?.data?.rows ||
+      []
+    ).map((row) => ({ ...row, __source: "user_country_activity_top" }));
+
     return {
-      climate: climateData?.rows || climateData?.data?.rows || [],
-      activity: activityData?.rows || activityData?.data?.rows || [],
+      climate: climateRows,
+      activity: activityRows,
     };
   } catch (error) {
     console.error("유저 추천 로드 실패:", error);

@@ -245,6 +245,251 @@ app.get("/db", async (req, res) => {
       return res.json({ ok: true, count: rows.length, rows });
     }
 
+    if (op === "product_detail") {
+      const productIdRaw = req.query.product_id;
+      const productId = productIdRaw ? String(productIdRaw).trim() : "";
+      const sourceHint = (req.query.source || "").toString().toLowerCase();
+      const regionId = req.query.region_id ? Number(req.query.region_id) : null;
+      const userId = req.query.user_id ? Number(req.query.user_id) : null;
+
+      if (!productId) {
+        return res
+          .status(400)
+          .json({ ok: false, error: "product_id query parameter required" });
+      }
+
+      let product = null;
+      let source = null;
+
+      const queryList = [];
+      const usedSql = new Set();
+
+      const pushQuery = (name, sql, params) => {
+        const key = `${name}:${sql}`;
+        if (!usedSql.has(key)) {
+          queryList.push({ name, sql, params });
+          usedSql.add(key);
+        }
+      };
+
+      const addGuestClimateQuery = (withRegion = false) => {
+        let sql = "SELECT * FROM guest_reco_climate WHERE product_id = ?";
+        const params = [productId];
+        if (withRegion && regionId) {
+          sql += " AND region_id = ?";
+          params.push(regionId);
+        }
+        sql += " ORDER BY base_score DESC, src_priority ASC LIMIT 1";
+        pushQuery(
+          withRegion ? "guest_reco_climate_region" : "guest_reco_climate",
+          sql,
+          params
+        );
+      };
+
+      const addGuestActivityQuery = (withRegion = false) => {
+        let sql = "SELECT * FROM guest_reco_activity WHERE product_id = ?";
+        const params = [productId];
+        if (withRegion && regionId) {
+          sql += " AND region_id = ?";
+          params.push(regionId);
+        }
+        sql += " ORDER BY base_score DESC, src_priority ASC LIMIT 1";
+        pushQuery(
+          withRegion ? "guest_reco_activity_region" : "guest_reco_activity",
+          sql,
+          params
+        );
+      };
+
+      const addUserClimateQuery = (withUser = false) => {
+        let sql =
+          "SELECT * FROM v_country_climate_top20_products WHERE product_id = ?";
+        const params = [productId];
+        if (withUser && userId) {
+          sql += " AND user_id = ?";
+          params.push(userId);
+        }
+        if (regionId) {
+          sql += " AND region_id = ?";
+          params.push(regionId);
+        }
+        sql += " ORDER BY reco_rank ASC, product_id ASC LIMIT 1";
+        pushQuery(
+          withUser
+            ? "user_country_climate_top_user"
+            : "user_country_climate_top",
+          sql,
+          params
+        );
+      };
+
+      const addUserActivityQuery = (withUser = false) => {
+        let sql =
+          "SELECT * FROM v_country_activity_top20_products WHERE product_id = ?";
+        const params = [productId];
+        if (withUser && userId) {
+          sql += " AND user_id = ?";
+          params.push(userId);
+        }
+        if (regionId) {
+          sql += " AND region_id = ?";
+          params.push(regionId);
+        }
+        sql += " ORDER BY reco_rank ASC, product_id ASC LIMIT 1";
+        pushQuery(
+          withUser
+            ? "user_country_activity_top_user"
+            : "user_country_activity_top",
+          sql,
+          params
+        );
+      };
+
+      const addUserPhotoQuery = (withUser = false) => {
+        let sql =
+          "SELECT * FROM v_country_photo_top20_products WHERE product_id = ?";
+        const params = [productId];
+        if (withUser && userId) {
+          sql += " AND user_id = ?";
+          params.push(userId);
+        }
+        if (regionId) {
+          sql += " AND region_id = ?";
+          params.push(regionId);
+        }
+        sql += " ORDER BY reco_rank ASC, product_id ASC LIMIT 1";
+        pushQuery(
+          withUser ? "user_country_photo_top_user" : "user_country_photo_top",
+          sql,
+          params
+        );
+      };
+
+      switch (sourceHint) {
+        case "guest_reco_climate":
+          addGuestClimateQuery(true);
+          addGuestClimateQuery(false);
+          break;
+        case "guest_reco_activity":
+          addGuestActivityQuery(true);
+          addGuestActivityQuery(false);
+          break;
+        case "user_country_climate_top":
+          addUserClimateQuery(true);
+          addUserClimateQuery(false);
+          break;
+        case "user_country_activity_top":
+          addUserActivityQuery(true);
+          addUserActivityQuery(false);
+          break;
+        case "user_country_photo_top":
+          addUserPhotoQuery(true);
+          addUserPhotoQuery(false);
+          break;
+        default:
+          break;
+      }
+
+      pushQuery(
+        "product_ranking",
+        "SELECT * FROM product_ranking WHERE product_id = ? LIMIT 1",
+        [productId]
+      );
+
+      pushQuery(
+        "products",
+        "SELECT * FROM products WHERE product_id = ? LIMIT 1",
+        [productId]
+      );
+
+      addGuestClimateQuery(true);
+      addGuestClimateQuery(false);
+      addGuestActivityQuery(true);
+      addGuestActivityQuery(false);
+      addUserClimateQuery(true);
+      addUserClimateQuery(false);
+      addUserActivityQuery(true);
+      addUserActivityQuery(false);
+      addUserPhotoQuery(true);
+      addUserPhotoQuery(false);
+
+      for (const q of queryList) {
+        try {
+          const [rows] = await pool.query(q.sql, q.params);
+          if (rows.length) {
+            product = rows[0];
+            source = q.name;
+            break;
+          }
+        } catch (err) {
+          console.warn(
+            `[product_detail] ${q.name} query warning:`,
+            err.message
+          );
+        }
+      }
+
+      if (!product) {
+        return res
+          .status(404)
+          .json({
+            ok: false,
+            error: "Product not found",
+            product_id: productId,
+          });
+      }
+
+      if (source) {
+        product.__source = source;
+      }
+
+      let images = [];
+      try {
+        const [imageRows] = await pool.query(
+          "SELECT image_url FROM product_images WHERE product_id = ? ORDER BY sort_order ASC LIMIT 10",
+          [productId]
+        );
+        images = imageRows
+          .map((row) => row?.image_url)
+          .filter((url) => typeof url === "string" && url.trim().length > 0);
+      } catch (err) {
+        if (err?.code !== "ER_NO_SUCH_TABLE") {
+          console.warn("[product_detail] image query warning:", err.message);
+        }
+      }
+
+      let related = [];
+      if (product.main_category) {
+        try {
+          const [relatedRows] = await pool.query(
+            `SELECT product_id, product_name, brand, price, original_price,
+                    discount_rate, img_url, main_category, sub_category
+             FROM product_ranking
+             WHERE main_category = ? AND product_id <> ?
+             ORDER BY base_score DESC, product_id ASC
+             LIMIT 9`,
+            [product.main_category, productId]
+          );
+          related = relatedRows.map((row) => ({
+            ...row,
+            __source: "product_ranking",
+          }));
+        } catch (err) {
+          console.warn("[product_detail] related query warning:", err.message);
+        }
+      }
+
+      return res.json({
+        ok: true,
+        product,
+        images,
+        related,
+        source,
+        product_id: productId,
+      });
+    }
+
     // 8-7) 제품 랭킹
     if (op === "product_ranking") {
       const limit = Math.min(Number(req.query.limit || 20), 100);
@@ -275,10 +520,10 @@ app.get("/db", async (req, res) => {
       const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
       const sql = `
         SELECT * FROM product_ranking
-        ${whereSql}
-        ORDER BY ${orderBy}, product_id ASC
-        LIMIT ? OFFSET ?
-      `;
+      ${whereSql}
+      ORDER BY ${orderBy}, product_id ASC
+      LIMIT ? OFFSET ?
+    `;
       params.push(limit, offset);
 
       const [rows] = await pool.query(sql, params);

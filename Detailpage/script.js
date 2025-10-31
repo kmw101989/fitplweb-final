@@ -246,6 +246,25 @@ function updateLocationTags(config) {
   }
 }
 
+// 현재 페이지의 region_id 가져오기
+function getCurrentRegionId() {
+  const params = new URLSearchParams(window.location.search);
+  const regionId = params.get("region_id");
+  if (regionId) {
+    return parseInt(regionId);
+  }
+
+  // URL에 없으면 국가 설정에서 기본 region_id 가져오기
+  const country = getCountryFromURL();
+  const config = getCurrentCountryConfig();
+  if (config && config.regions && config.regions.length > 0) {
+    // 가장 작은 region_id 반환
+    return config.regions[0].id;
+  }
+
+  return null;
+}
+
 // 유저 ID 결정 함수: 유저의 trip_region_id와 현재 페이지 지역 ID 비교
 // 일치하면 유저 ID, 불일치하면 게스트 ID(region_id) 반환
 function determineUserId(currentPageRegionId) {
@@ -269,26 +288,44 @@ function determineUserId(currentPageRegionId) {
 // 지역별 제품 로드
 async function loadProductsForRegion(regionId) {
   // 유저의 trip_region_id와 현재 페이지 region_id 비교하여 적절한 user_id 결정
+  // 게스트이거나 불일치 시: region_id를 user_id로 사용 (1~20 범위)
   const userId = determineUserId(regionId);
 
   console.log(`제품 로드: region_id=${regionId}, 사용할 user_id=${userId}`);
 
   try {
-    // 날씨별 추천
-    await loadSectionProducts("weather-section", userId, "climate");
+    // 날씨별 추천 (userId가 null이면 regionId를 user_id로 사용)
+    await loadSectionProducts(
+      "weather-section",
+      userId || regionId,
+      "climate",
+      regionId
+    );
 
     // 활동별 추천
-    await loadSectionProducts("activity-section", userId, "activity");
+    await loadSectionProducts(
+      "activity-section",
+      userId || regionId,
+      "activity",
+      regionId
+    );
 
-    // 사진용 추천 (photo)
-    await loadSectionProducts("photo-section", userId, "photo");
+    // 사진용 추천 (photo) - 게스트도 region_id를 user_id로 사용
+    await loadSectionProducts(
+      "photo-section",
+      userId || regionId,
+      "photo",
+      regionId
+    );
   } catch (error) {
     console.error("제품 로드 실패:", error);
   }
 }
 
 // 섹션별 제품 로드
-async function loadSectionProducts(sectionId, userId, type) {
+// userId: 실제 유저 ID 또는 게스트 ID(region_id, 1~20)
+// regionId: 현재 페이지의 region_id (게스트 ID 결정용)
+async function loadSectionProducts(sectionId, userId, type, regionId = null) {
   const section = document.getElementById(sectionId);
   if (!section) return;
 
@@ -298,7 +335,8 @@ async function loadSectionProducts(sectionId, userId, type) {
   const base = "/.netlify/functions/db";
   let url = "";
 
-  // userId가 있으면 유저 뷰 사용, 없으면 게스트 추천 사용
+  // userId가 있으면 뷰 사용 (유저 ID 또는 게스트 ID=region_id 1~20)
+  // 게스트 모드: region_id를 user_id로 사용해서 뷰에서 해당 게스트 데이터 조회
   if (userId) {
     if (type === "climate") {
       url = `${base}?op=user_country_climate_top&user_id=${userId}&limit=20`;
@@ -308,55 +346,103 @@ async function loadSectionProducts(sectionId, userId, type) {
       url = `${base}?op=user_country_photo_top&user_id=${userId}&limit=20`;
     }
   } else {
-    // userId가 없으면 게스트 추천 사용 (기후/활동만, 사진은 없음)
-    if (type === "climate") {
-      url = `${base}?op=guest_reco_climate`;
-    } else if (type === "activity") {
-      url = `${base}?op=guest_reco_activity`;
-    } else if (type === "photo") {
-      // 사진용 추천은 게스트용이 없으므로 빈 배열
-      console.log("사진용 추천은 유저 전용입니다.");
-      return;
+    // userId가 null인 경우는 매우 드물지만, regionId를 게스트 ID로 사용
+    const fallbackRegionId = regionId || getCurrentRegionId();
+    if (fallbackRegionId && fallbackRegionId >= 1 && fallbackRegionId <= 20) {
+      // region_id를 user_id로 사용 (1~20 범위 내)
+      if (type === "climate") {
+        url = `${base}?op=user_country_climate_top&user_id=${fallbackRegionId}&limit=20`;
+      } else if (type === "activity") {
+        url = `${base}?op=user_country_activity_top&user_id=${fallbackRegionId}&limit=20`;
+      } else if (type === "photo") {
+        url = `${base}?op=user_country_photo_top&user_id=${fallbackRegionId}&limit=20`;
+      }
+    } else {
+      // region_id가 범위 밖이거나 없으면 게스트 추천 API 사용 (fallback)
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      if (type === "climate") {
+        url = fallbackRegionId
+          ? `${base}?op=guest_reco_climate&region_id=${fallbackRegionId}&month=${currentMonth}`
+          : `${base}?op=guest_reco_climate`;
+      } else if (type === "activity") {
+        url = fallbackRegionId
+          ? `${base}?op=guest_reco_activity&region_id=${fallbackRegionId}`
+          : `${base}?op=guest_reco_activity`;
+      } else if (type === "photo") {
+        console.log("사진용 추천은 유저 전용입니다.");
+        return;
+      }
     }
   }
 
   if (!url) return;
 
   try {
+    console.log(`[${type}] API 호출 시작:`, url);
     const response = await fetch(url);
+
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      const errorText = await response.text().catch(() => "");
+      console.error(`[${type}] HTTP 에러 ${response.status}:`, errorText);
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
     }
 
     const data = await response.json();
+    console.log(`[${type}] API 응답:`, {
+      ok: data?.ok,
+      count: data?.count,
+      rowsLength: data?.rows?.length || data?.data?.rows?.length || 0,
+      hasRows: !!data?.rows,
+      hasDataRows: !!data?.data?.rows,
+    });
+
     const products = data?.rows || data?.data?.rows || [];
 
     if (products.length > 0) {
-      renderProductsToGrid(productGrid, products);
+      // 처음에는 9개만 표시
+      renderProductsToGrid(productGrid, products, 9);
       console.log(
-        `${type} 섹션: ${products.length}개 제품 로드 완료 (user_id: ${userId})`
+        `[${type}] 성공: ${products.length}개 제품 로드 완료 (user_id: ${userId})`
       );
     } else {
-      console.warn(`${type} 섹션: 제품이 없습니다 (user_id: ${userId})`);
+      console.warn(`[${type}] 경고: 제품이 없습니다 (user_id: ${userId})`, {
+        responseData: data,
+        url,
+      });
     }
   } catch (error) {
-    console.error(`${type} 제품 로드 실패:`, error);
+    console.error(`[${type}] 제품 로드 실패:`, {
+      error: error.message,
+      stack: error.stack,
+      url,
+      userId,
+    });
   }
 }
 
 // 제품 그리드에 제품 렌더링
-function renderProductsToGrid(grid, products) {
-  // 기존 제품 제거 (하드코딩된 것들 제외하고 동적으로 추가된 것만)
-  const dynamicProducts = grid.querySelectorAll(
-    ".product-card[data-dynamic='true']"
-  );
-  dynamicProducts.forEach((card) => card.remove());
+function renderProductsToGrid(
+  grid,
+  products,
+  maxProducts = 9,
+  skipButtonSetup = false
+) {
+  // 기존 모든 제품 제거 (하드코딩된 것들 포함)
+  grid.innerHTML = "";
 
-  products.slice(0, 9).forEach((product) => {
+  // 제품 데이터를 그리드에 저장 (더보기 버튼에서 사용)
+  grid.dataset.allProducts = JSON.stringify(products);
+
+  // API에서 받아온 제품들만 표시
+  products.slice(0, maxProducts).forEach((product) => {
     const card = createProductCardFromAPI(product);
-    card.setAttribute("data-dynamic", "true");
     grid.appendChild(card);
   });
+
+  // 더보기 버튼 설정 (건너뛰지 않는 경우만)
+  if (!skipButtonSetup) {
+    setupMoreButton(grid, products.length, maxProducts);
+  }
 }
 
 // API 데이터로 제품 카드 생성
@@ -432,6 +518,65 @@ function createProductCardFromAPI(product) {
   });
 
   return card;
+}
+
+// 더보기 버튼 설정 및 이벤트 핸들러
+function setupMoreButton(grid, totalProducts, currentCount = 9) {
+  const section = grid.closest("section");
+  if (!section) return;
+
+  let moreBtn = section.querySelector(".more-btn");
+  if (!moreBtn) {
+    // 더보기 버튼이 없으면 생성
+    moreBtn = document.createElement("button");
+    moreBtn.className = "more-btn";
+    moreBtn.textContent = "더보기";
+    grid.parentNode.insertBefore(moreBtn, grid.nextSibling);
+  }
+
+  // 제품이 9개 이하면 더보기 버튼 숨김
+  if (totalProducts <= 9) {
+    moreBtn.style.display = "none";
+    return;
+  }
+
+  moreBtn.style.display = "block";
+
+  // 현재 표시된 제품 수에 따라 버튼 상태 설정
+  const isExpanded = currentCount >= 18;
+  moreBtn.dataset.expanded = isExpanded ? "true" : "false";
+  moreBtn.textContent = isExpanded ? "접기" : "더보기";
+
+  // 기존 이벤트 리스너 제거 (중복 방지)
+  const newMoreBtn = moreBtn.cloneNode(true);
+  newMoreBtn.dataset.expanded = moreBtn.dataset.expanded;
+  newMoreBtn.textContent = moreBtn.textContent;
+  moreBtn.parentNode.replaceChild(newMoreBtn, moreBtn);
+
+  newMoreBtn.addEventListener("click", () => {
+    const isCurrentlyExpanded = newMoreBtn.dataset.expanded === "true";
+    const allProductsJson = grid.dataset.allProducts;
+
+    if (!allProductsJson) return;
+
+    try {
+      const allProducts = JSON.parse(allProductsJson);
+
+      if (isCurrentlyExpanded) {
+        // 접기: 9개로 줄이기
+        renderProductsToGrid(grid, allProducts, 9, true);
+        newMoreBtn.textContent = "더보기";
+        newMoreBtn.dataset.expanded = "false";
+      } else {
+        // 펼치기: 18개로 늘리기
+        renderProductsToGrid(grid, allProducts, 18, true);
+        newMoreBtn.textContent = "접기";
+        newMoreBtn.dataset.expanded = "true";
+      }
+    } catch (error) {
+      console.error("더보기 버튼 처리 실패:", error);
+    }
+  });
 }
 
 // 로컬 스토리지에서 유저 정보 가져오기 (메인 페이지와 동일)

@@ -302,8 +302,19 @@ body {
 /* Weather Section */
 .weather-section {
   background-color: rgb(245, 245, 245);
-  padding: 0 16px 24px 16px;
+  padding: 0;
   margin-bottom: 16px;
+}
+
+.weather-section .section-tabs,
+.weather-section .section-header {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.weather-section .product-grid {
+  padding: 0;
+  margin: 0;
 }
 
 /* Snap Section */
@@ -411,8 +422,20 @@ body {
 /* Activity Section */
 .activity-section {
   background-color: rgb(245, 245, 245);
-  padding: 0 16px 24px 16px;
+  padding: 0;
   margin-bottom: 16px;
+}
+
+.activity-section .section-tabs,
+.activity-section .section-header,
+.activity-section .activity-tags {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.activity-section .product-grid {
+  padding: 0;
+  margin: 0;
 }
 
 .activity-tags {
@@ -447,8 +470,19 @@ body {
 /* Photo Section */
 .photo-section {
   background-color: rgb(245, 245, 245);
-  padding: 0 16px 24px 16px;
+  padding: 0;
   margin-bottom: 16px;
+}
+
+.photo-section .section-tabs,
+.photo-section .section-header {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.photo-section .product-grid {
+  padding: 0;
+  margin: 0;
 }
 
 /* Local Mood Section */
@@ -461,20 +495,37 @@ body {
 /* Product Grid */
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, 281.6px);
+  gap: 0;
+  row-gap: 0;
+  column-gap: 0;
+  margin: 0 auto;
+  padding: 0;
   margin-bottom: 24px;
+  justify-content: center;
 }
 
 .product-card {
   background-color: #fff;
   overflow: hidden;
   position: relative;
+  width: 281.6px;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: none;
 }
 
 .product-image {
   position: relative;
+  height: 312px;
   overflow: hidden;
-  height: 220px;
+}
+
+.product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .like-btn {

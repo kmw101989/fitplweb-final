@@ -81,36 +81,68 @@ app.get("/user_top", async (req, res) => {
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`DB bridge on http://localhost:${PORT}`));
 
-/* 게스트: 기후 추천 (파라미터 없음, Top N만) */
-app.get("/guest_reco_climate", async (_req, res) => {
+/* 게스트: 기후 추천 (지역별, 월별 필터링 지원) */
+app.get("/guest_reco_climate", async (req, res) => {
   try {
-    const limit = 20; // 필요시 숫자만 바꿔 사용
-    const [rows] = await pool.query(
-      `SELECT *
-         FROM guest_reco_climate
-        ORDER BY base_score DESC, src_priority ASC, product_id ASC
-        LIMIT ?`,
-      [limit]
-    );
+    const region_id = req.query.region_id ? Number(req.query.region_id) : null;
+    const month = req.query.month || null; // YYYY-MM 형식
+    const limit = Math.min(Number(req.query.limit || 20), 100);
+
+    let query = `SELECT * FROM guest_reco_climate WHERE 1=1`;
+    const params = [];
+
+    // region_id 필터링
+    if (region_id) {
+      query += ` AND region_id = ?`;
+      params.push(region_id);
+    }
+
+    // month 필터링
+    if (month && month.length >= 7) {
+      query += ` AND month = ?`;
+      params.push(month.slice(0, 7)); // YYYY-MM 형식 보장
+    }
+
+    query += ` ORDER BY base_score DESC, src_priority ASC, product_id ASC LIMIT ?`;
+    params.push(limit);
+
+    const [rows] = await pool.query(query, params);
     res.json({ ok: true, count: rows.length, rows });
   } catch (err) {
+    console.error("guest_reco_climate error:", err);
     res.status(500).json({ ok: false, error: String(err.message) });
   }
 });
 
-/* 게스트: 활동 추천 (파라미터 없음, Top N만) */
-app.get("/guest_reco_activity", async (_req, res) => {
+/* 게스트: 활동 추천 (지역별 필터링 지원) */
+app.get("/guest_reco_activity", async (req, res) => {
   try {
-    const limit = 20; // 필요시 숫자만 바꿔 사용
-    const [rows] = await pool.query(
-      `SELECT *
-         FROM guest_reco_activity
-        ORDER BY base_score DESC, src_priority ASC, product_id ASC
-        LIMIT ?`,
-      [limit]
-    );
+    const region_id = req.query.region_id ? Number(req.query.region_id) : null;
+    const activity_tag = req.query.activity_tag || null;
+    const limit = Math.min(Number(req.query.limit || 20), 100);
+
+    let query = `SELECT * FROM guest_reco_activity WHERE 1=1`;
+    const params = [];
+
+    // region_id 필터링
+    if (region_id) {
+      query += ` AND region_id = ?`;
+      params.push(region_id);
+    }
+
+    // activity_tag 필터링 (선택사항)
+    if (activity_tag) {
+      query += ` AND activity_tag = ?`;
+      params.push(activity_tag);
+    }
+
+    query += ` ORDER BY base_score DESC, src_priority ASC, product_id ASC LIMIT ?`;
+    params.push(limit);
+
+    const [rows] = await pool.query(query, params);
     res.json({ ok: true, count: rows.length, rows });
   } catch (err) {
+    console.error("guest_reco_activity error:", err);
     res.status(500).json({ ok: false, error: String(err.message) });
   }
 });

@@ -1,53 +1,30 @@
-// netlify/functions/db.js
-const BRIDGE_URL = process.env.BRIDGE_URL;
-const BRIDGE_TOKEN = process.env.BRIDGE_TOKEN;
+// netlify/functions/_db.js
+// ──────────────────────────────────────────────────────────────
+// 호환용 SHIM:
+// 1) 라우트 유지: "/.netlify/functions/_db" → db.js와 동일 동작
+// 2) 모듈 호환: import { q } from "./_db.js" 를 임시 지원(경고 출력)
+//    → 점진적으로 q() 의존을 제거하고, db.js의 "?op=" 엔드포인트로 바꿔주세요.
+// ──────────────────────────────────────────────────────────────
 
-function json(status, body) {
+import { handler as dbHandler } from "./db.js";
+
+// (1) 함수 라우트: _db도 db와 동일하게 동작
+export const handler = async (event, context) => {
+  return dbHandler(event, context);
+};
+
+// (2) 임시 q() 호환 래퍼 (Deprecated)
+// 예전 코드가 빌드/런타임에서 바로 깨지지 않도록 막아줍니다.
+// 실제 데이터 호출은 db.js의 REST 엔드포인트로 바꿔주세요:
+//   fetch(`${process.env.BRIDGE_URL || ''}/.netlify/functions/db?op=...`)
+export async function q(...args) {
+  console.warn(
+    "[_db.q] Deprecated! Replace q() with fetch to `/.netlify/functions/db?op=...`",
+    { args }
+  );
   return {
-    statusCode: status,
-    headers: { "Content-Type": "application/json; charset=utf-8" },
-    body: JSON.stringify(body),
+    ok: false,
+    deprecated: true,
+    hint: "Use fetch(`${BRIDGE_URL}/.netlify/functions/db?op=...`) or call db.js directly.",
   };
 }
-
-exports.handler = async (event) => {
-  try {
-    if (!BRIDGE_URL || !BRIDGE_TOKEN) {
-      return json(500, { ok: false, error: "Missing BRIDGE_URL/BRIDGE_TOKEN" });
-    }
-
-    const u = new URL(event.rawUrl);
-    const op = u.searchParams.get("op") || "ping";
-
-    // op → 브리지 path 매핑
-    const map = {
-      ping: "/ping",
-      time: "/time",
-      guest_reco_climate: "/guest_reco_climate",
-      guest_reco_activity: "/guest_reco_activity",
-
-      // 필요 시 다음 라인들 활성화 (브리지에 라우트 구현되어 있어야 함)
-      guest_reco_climate: "/guest_reco_climate",
-      guest_reco_activity: "/guest_reco_activity",
-      country_climate_top: "/country_climate_top",
-      country_activity_top: "/country_activity_top",
-      country_photo_top: "/country_photo_top",
-    };
-
-    const basePath = map[op];
-    if (!basePath) return json(400, { ok: false, error: "bad op" });
-
-    // 쿼리스트링 그대로 브리지로 전달
-    const qs = u.search || "";
-    const url = `${BRIDGE_URL}${basePath}${qs}`;
-
-    const r = await fetch(url, {
-      headers: { Authorization: `Bearer ${BRIDGE_TOKEN}` },
-    });
-
-    const data = await r.json().catch(() => ({}));
-    return json(r.ok ? 200 : 502, data);
-  } catch (err) {
-    return json(500, { ok: false, error: String(err?.message || err) });
-  }
-};

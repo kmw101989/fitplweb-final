@@ -7,7 +7,7 @@ const countryConfig = {
       { id: 2, name: "오사카" },
     ],
     heroTitle: "일본 거리에서 만나는<br />여행과 스타일의 완벽한 조합",
-    defaultRegion: "후쿠오카",
+    defaultRegion: "도쿄",
   },
   중국: {
     regionId: 3, // 상하이 (기본값)
@@ -98,6 +98,66 @@ const countryConfig = {
   },
 };
 
+const regionHeroImages = {
+  도쿄: "https://image.msscdn.net/thumbnails/snap/images/2025/05/10/37476f5bdad34b8aacf4cbb4cc401c35.jpg?w=760",
+  오사카: "https://image.msscdn.net/thumbnails/snap/images/2025/04/25/194f4db0054f481a9b5d85402419a957.jpg?w=760",
+  상하이: "https://image.msscdn.net/thumbnails/snap/images/2025/08/18/051d85d036554c4da6152e9e77c7d8f5.jpg?w=760",
+  광저우: "https://image.msscdn.net/thumbnails/snap/images/2025/06/07/f77526c9c8bc42cbbc3ea8262d462e14.jpg?w=760",
+  가오슝: "https://image.msscdn.net/thumbnails/mfile_s01/_street_images/5231/51679a6c1760aimg_full220.jpg?w=760",
+  타이베이: "https://image.msscdn.net/thumbnails/snap/images/2025/05/07/ee06d3afed214fe3b099c3565550c221.jpg?w=760",
+  방콕: "https://image.msscdn.net/thumbnails/snap/images/2025/07/17/321cf95ee6b145c2aa5ccd77f4a5ae64.jpg?w=760",
+  치앙마이: "https://image.msscdn.net/thumbnails/snap/images/2025/04/19/e67a7a252fa441d3a6c82c0a75a384e2.jpg?w=760",
+  다낭: "https://image.msscdn.net/thumbnails/display/images/usersnap/2023/07/16/7aabbca5ac1e4e198d8d78bd55bac820.jpg?w=760",
+  하노이: "https://image.msscdn.net/thumbnails/display/images/usersnap/2023/07/08/551286a8801a4422a101c8bac43e39cc.jpg?w=760",
+  마닐라: "https://image.msscdn.net/thumbnails/display/images/usersnap/2023/02/17/4a7027e2501b4bfc82fed5f20ff91a5c.jpg?w=760",
+  세부: "https://image.msscdn.net/thumbnails/snap/images/2025/10/26/a8edaccefd384288a6503351bf2637fc.jpg?w=760",
+  홍콩: "https://image.msscdn.net/thumbnails/snap/images/2025/10/12/aa07bb89a1f841e3aecf74ec8844388e.jpg?w=760",
+  마카오: "https://image.msscdn.net/thumbnails/snap/images/2025/01/03/31fb0b3f11e8418abfb40c54559eb30a.jpg?w=760",
+  발리: "https://image.msscdn.net/thumbnails/snap/images/2025/10/20/5950d9c0edc14900bcb223724488d520.jpg?w=760",
+  자카르타: "https://image.msscdn.net/thumbnails/display/images/usersnap/2024/01/28/b9594548815645f88adba2fee698ec5c.jpg?w=760",
+  괌: "https://image.msscdn.net/thumbnails/snap/images/2025/10/03/95b714aa3884492b9034cbdbd2a4a4df.jpg?w=760",
+  하와이: "https://image.msscdn.net/thumbnails/snap/images/2025/10/15/5fdbeac51a424dff86ad8641585fdba3.jpg?w=760",
+  싱가포르: "https://image.msscdn.net/thumbnails/snap/images/2024/12/01/b77e38a63ca94ca8ab505238a782a060.jpg?w=760",
+  시드니: "https://image.msscdn.net/thumbnails/snap/images/2025/10/13/f0293f639bd7415c9f57c4010a57eb13.jpg?w=760",
+};
+
+// 지역별 10월 평균 기온 (도씨)
+const regionOctoberTemperature = {
+  도쿄: 19.0,
+  오사카: 19.2,
+  후쿠오카: 20.1,
+  상하이: 18.0,
+  광저우: 23.5,
+  타이베이: 25.2,
+  가오슝: 27.3,
+  방콕: 28.1,
+  치앙마이: 26.4,
+  하노이: 24.3,
+  다낭: 26.2,
+  마닐라: 28.5,
+  세부: 29.1,
+  홍콩: 25.4,
+  마카오: 25.6,
+  자카르타: 28.3,
+  발리: 28.7,
+  괌: 29.3,
+  하와이: 27.2,
+  싱가포르: 28.4,
+  시드니: 19.5,
+};
+
+function applyHeroBackground(regionName) {
+  const heroSection = document.querySelector(".hero-section");
+  if (!heroSection) return;
+
+  const imageUrl = regionHeroImages[regionName];
+  if (imageUrl) {
+    heroSection.style.backgroundImage = `linear-gradient(180deg, rgba(0, 0, 0, 0.05) 0%, rgba(0, 0, 0, 0.65) 100%), url("${imageUrl}")`;
+  } else {
+    heroSection.style.backgroundImage = "";
+  }
+}
+
 // URL 파라미터에서 국가 가져오기
 function getCountryFromURL() {
   const params = new URLSearchParams(window.location.search);
@@ -133,7 +193,10 @@ function updatePageContent() {
   }
 
   // region_id에 해당하는 지역 찾기
-  let selectedRegion = config.defaultRegion;
+  let selectedRegion =
+    config.defaultRegion || (config.regions && config.regions[0]
+      ? config.regions[0].name
+      : "");
   if (regionId) {
     const region = config.regions.find((r) => r.id === parseInt(regionId));
     if (region) {
@@ -162,10 +225,13 @@ function updatePageContent() {
     heroTitle.innerHTML = config.heroTitle;
   }
 
+  applyHeroBackground(selectedRegion);
+
   // 날씨 정보 업데이트
   const weatherTemp = document.getElementById("weather-temp");
   if (weatherTemp) {
-    weatherTemp.textContent = `${selectedRegion} 28.2°C | `;
+    const temp = regionOctoberTemperature[selectedRegion] || 20.0;
+    weatherTemp.textContent = `${selectedRegion} ${temp.toFixed(1)}°C | `;
   }
 
   // 지역 태그 업데이트
@@ -227,8 +293,11 @@ function updateLocationTags(config) {
       // 날씨 정보 업데이트
       const weatherTemp = document.getElementById("weather-temp");
       if (weatherTemp) {
-        weatherTemp.textContent = `${region.name} 28.2°C | `;
+        const temp = regionOctoberTemperature[region.name] || 20.0;
+        weatherTemp.textContent = `${region.name} ${temp.toFixed(1)}°C | `;
       }
+
+      applyHeroBackground(region.name);
 
       // 제품 다시 로드
       loadProductsForRegion(region.id);
@@ -661,12 +730,109 @@ weatherTags.forEach((tag) => {
   });
 });
 
+// 활동 태그 한글 텍스트를 API activity_tag로 매핑
+function mapActivityTagToAPI(한글태그) {
+  const mapping = {
+    "자연체험": ["national_park", "hiking", "beach", "zoo", "aquarium"],
+    "휴양": ["beach", "hot_spring", "yacht_cruise", "cafe_hopping"],
+    "테마파크": ["theme_park"],
+    "레저": ["yacht_cruise", "observation_deck", "outlet_mall", "hiking"],
+    "스포츠": ["hiking"],
+    "도시관광": ["city_tour", "market_night", "cafe_hopping", "observation_deck", "cathedral_church", "temple_shrine", "outlet_mall"],
+    "문화/예술": ["art_museum", "museum", "cathedral_church", "temple_shrine"],
+    "+더보기": null, // 더보기는 필터링 안함
+  };
+  return mapping[한글태그] || null;
+}
+
+// 제품을 activity_tag로 정렬 (일치하는 것을 상위로)
+function sortProductsByActivityTag(products, activityTags) {
+  if (!activityTags || !Array.isArray(activityTags) || activityTags.length === 0 || !products || products.length === 0) {
+    return products;
+  }
+
+  // activity_tag 배열을 소문자로 정규화
+  const normalizedTags = activityTags.map(tag => String(tag).toLowerCase().trim());
+  
+  return [...products].sort((a, b) => {
+    const aTag = String(a?.activity_tag || "").toLowerCase().trim();
+    const bTag = String(b?.activity_tag || "").toLowerCase().trim();
+    
+    // 배열 내의 태그와 일치하는지 확인
+    const aMatch = normalizedTags.includes(aTag);
+    const bMatch = normalizedTags.includes(bTag);
+    
+    // 일치하는 것을 상위로
+    if (aMatch && !bMatch) return -1;
+    if (!aMatch && bMatch) return 1;
+    
+    // 둘 다 일치하거나 둘 다 불일치하면 원래 순서 유지
+    return 0;
+  });
+}
+
 // 액티비티 태그 전환 기능
 activityTags.forEach((tag) => {
-  tag.addEventListener("click", (e) => {
-    const section = e.target.closest("section");
+  tag.addEventListener("click", async (e) => {
+    const clickedTag = e.target;
+    const tagText = clickedTag.textContent.trim();
+    
+    // +더보기는 필터링 안함
+    if (tagText === "+더보기") {
+      const section = clickedTag.closest("section");
+      const sectionActivityTags = section.querySelectorAll(".activity-tag");
+      switchTab(clickedTag, sectionActivityTags);
+      return;
+    }
+    
+    // active 상태 토글
+    const section = clickedTag.closest("section");
     const sectionActivityTags = section.querySelectorAll(".activity-tag");
-    switchTab(e.target, sectionActivityTags);
+    switchTab(clickedTag, sectionActivityTags);
+    
+    // 활동별 추천 섹션에서만 작동
+    if (section?.id !== "activity-section") return;
+    
+    const productGrid = section.querySelector(".product-grid");
+    if (!productGrid) return;
+    
+    // 저장된 제품 데이터 가져오기
+    const storedProducts = productGrid.dataset.allProducts;
+    if (!storedProducts) {
+      console.warn("[활동 태그] 저장된 제품 데이터가 없습니다.");
+      return;
+    }
+    
+    try {
+      const allProducts = JSON.parse(storedProducts);
+      const activityTags = mapActivityTagToAPI(tagText);
+      
+      if (!activityTags) {
+        console.warn(`[활동 태그] ${tagText}에 대한 매핑이 없습니다.`);
+        return;
+      }
+      
+      console.log(`[활동 태그] ${tagText} 클릭, activity_tags:`, activityTags);
+      
+      // activity_tag 배열로 정렬
+      const sortedProducts = sortProductsByActivityTag(allProducts, activityTags);
+      
+      // 제품 목록에 activity_tag가 있는지 확인
+      const hasActivityTag = sortedProducts.some(p => p?.activity_tag);
+      if (!hasActivityTag) {
+        console.warn("[활동 태그] 제품 데이터에 activity_tag 필드가 없어 필터링할 수 없습니다.");
+        // activity_tag가 없으면 원래대로 표시
+        renderProductsToGrid(productGrid, allProducts, 9, false);
+        return;
+      }
+      
+      // 일치하는 제품이 상위로 정렬된 목록으로 재렌더링
+      renderProductsToGrid(productGrid, sortedProducts, 9, false);
+      
+      console.log(`[활동 태그] 제품 정렬 완료: 총 ${sortedProducts.length}개`);
+    } catch (error) {
+      console.error("[활동 태그] 제품 정렬 실패:", error);
+    }
   });
 });
 

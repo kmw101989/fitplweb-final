@@ -223,11 +223,12 @@ app.get("/db", async (req, res) => {
 
     if (op === "user_country_activity_top") {
       const user_id = Number(req.query.user_id || 0);
-      const limit = Math.min(Number(req.query.limit || 20), 100);
+      const limit = 100; // 최대 1000 row이므로 limit 100 고정
       if (!user_id)
         return res.status(400).json({ ok: false, error: "user_id required" });
+      // v_country_activity_products_all 뷰 사용 (activity_tag 포함)
       const [rows] = await pool.query(
-        `SELECT * FROM v_country_activity_top20_products WHERE user_id = ? LIMIT ?`,
+        `SELECT * FROM v_country_activity_products_all WHERE user_id = ? LIMIT ?`,
         [user_id, limit]
       );
       return res.json({ ok: true, count: rows.length, rows });
@@ -314,7 +315,9 @@ app.get("/db", async (req, res) => {
           sql += " AND region_id = ?";
           params.push(regionId);
         }
-        sql += " ORDER BY reco_rank ASC, product_id ASC LIMIT 1";
+        // TODO: DDL 수정 후 reco_rank 컬럼 추가되면 아래 주석 해제
+        // sql += " ORDER BY reco_rank ASC, product_id ASC LIMIT 1";
+        sql += " ORDER BY product_id ASC LIMIT 1";
         pushQuery(
           withUser
             ? "user_country_climate_top_user"
@@ -336,7 +339,9 @@ app.get("/db", async (req, res) => {
           sql += " AND region_id = ?";
           params.push(regionId);
         }
-        sql += " ORDER BY reco_rank ASC, product_id ASC LIMIT 1";
+        // TODO: DDL 수정 후 reco_rank 컬럼 추가되면 아래 주석 해제
+        // sql += " ORDER BY reco_rank ASC, product_id ASC LIMIT 1";
+        sql += " ORDER BY product_id ASC LIMIT 1";
         pushQuery(
           withUser
             ? "user_country_activity_top_user"
@@ -358,7 +363,9 @@ app.get("/db", async (req, res) => {
           sql += " AND region_id = ?";
           params.push(regionId);
         }
-        sql += " ORDER BY reco_rank ASC, product_id ASC LIMIT 1";
+        // TODO: DDL 수정 후 reco_rank 컬럼 추가되면 아래 주석 해제
+        // sql += " ORDER BY reco_rank ASC, product_id ASC LIMIT 1";
+        sql += " ORDER BY product_id ASC LIMIT 1";
         pushQuery(
           withUser ? "user_country_photo_top_user" : "user_country_photo_top",
           sql,
@@ -463,7 +470,7 @@ app.get("/db", async (req, res) => {
       if (product.main_category) {
         try {
           const [relatedRows] = await pool.query(
-            `SELECT product_id, product_name, brand, price, original_price,
+            `SELECT product_id, product_name, brand, price,
                     discount_rate, img_url, main_category, sub_category
              FROM product_ranking
              WHERE main_category = ? AND product_id <> ?

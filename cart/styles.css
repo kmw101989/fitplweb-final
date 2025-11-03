@@ -348,10 +348,11 @@ body {
   overflow: hidden;
 }
 
-.image-placeholder {
+.item-image-thumb {
   width: 100%;
   height: 100%;
-  background-color: #e0e0e0;
+  object-fit: cover;
+  display: block;
 }
 
 .item-info {
@@ -421,6 +422,112 @@ body {
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
+}
+
+.cart-empty {
+  padding: 24px;
+  text-align: center;
+  color: #666666;
+  border: 1px dashed #e0e0e0;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  background-color: #ffffff;
+}
+
+#cart-reco-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.cart-reco-card {
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  background-color: #ffffff;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+  overflow: hidden;
+}
+
+.cart-reco-card:hover {
+  border-color: #262626;
+  transform: translateY(-2px);
+}
+
+.cart-reco-link {
+  display: block;
+  padding: 12px;
+  text-decoration: none;
+  color: inherit;
+  height: 100%;
+}
+
+.cart-reco-image {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: #f5f5f5;
+  margin-bottom: 12px;
+}
+
+.cart-reco-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cart-reco-brand {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1c1c1c;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.cart-reco-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333333;
+  margin-bottom: 12px;
+  line-height: 1.4;
+  min-height: 40px;
+}
+
+.cart-reco-price {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111111;
+}
+
+.cart-reco-price-original {
+  font-size: 13px;
+  color: #a0a0a0;
+  text-decoration: line-through;
+  font-weight: 400;
+}
+
+.cart-reco-price-percent {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ff4d4f;
+}
+
+.cart-reco-empty {
+  grid-column: 1 / -1;
+  padding: 28px;
+  text-align: center;
+  color: #666666;
+  background-color: #ffffff;
+  border: 1px dashed #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
 }
 
 /* Cart Coupon Section */
@@ -1264,3 +1371,122 @@ body {
 .submit-btn { height: 40px; padding: 0 16px; background: #111; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
 .submit-btn:hover { background: #1a1a1a; }
 @media (max-width: 520px) { .form-row { grid-template-columns: 1fr; } }
+
+/* Contact Modal Styles */
+.contact-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+}
+
+.contact-modal-overlay.show {
+  display: flex;
+}
+
+.contact-modal {
+  width: 480px;
+  max-width: calc(100% - 40px);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  position: relative;
+  padding: 28px 24px;
+}
+
+.contact-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: #f5f5f5;
+  color: #333;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 36px;
+  text-align: center;
+  transition: background-color 0.2s;
+}
+
+.contact-modal-close:hover {
+  background: #e0e0e0;
+}
+
+.contact-modal-content h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #000;
+}
+
+.contact-modal-content > p {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+#contactForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.contact-input,
+.contact-textarea {
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 14px;
+  color: #333;
+  background: #fff;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.contact-input:focus,
+.contact-textarea:focus {
+  outline: none;
+  border-color: #000;
+}
+
+.contact-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.contact-submit-btn {
+  height: 40px;
+  padding: 0 16px;
+  background: #111;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.contact-submit-btn:hover:not(:disabled) {
+  background: #1a1a1a;
+}
+
+.contact-submit-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+#contactForm .form-field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111;
+  margin-bottom: 6px;
+}

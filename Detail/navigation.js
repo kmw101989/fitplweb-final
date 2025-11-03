@@ -28,6 +28,41 @@ const GENDER_LABELS = {
   kids: "키즈",
 };
 
+const DEMO_PRODUCTS = {
+  "4315498": {
+    product: {
+      product_id: "4315498",
+      brand: "rrr",
+      main_category: "outerwear",
+      sub_category: "cardigan",
+      product_name: "에브리데이 라운드 니트 가디건 [블랙]",
+      product_name_local: "에브리데이 라운드 니트 가디건 [블랙]",
+      description: "Please refer to the detailed page",
+      summary: "Please refer to the detailed page",
+      composition: "50% rayon, 22% nylon, 28% PBT",
+      price: 20000,
+      original_price: 45000,
+      discount_rate: 56,
+      style_code: "L24FWCD01301",
+      product_url: "https://www.musinsa.com/products/4315498",
+      rating: 4.8,
+      review_count: 423,
+      reward_points: 3000,
+      season: "2024 FW",
+      tags: "#에브리데이스타일",
+      img_url:
+        "https://image.msscdn.net/thumbnails/images/goods_img/20240809/4315498/4315498_17399364629633_500.jpg",
+      visibility: "public",
+      coupon_rate: 0.2,
+      monthly_views: 35000,
+    },
+    images: [
+      "https://image.msscdn.net/thumbnails/images/goods_img/20240809/4315498/4315498_17399364629633_500.jpg",
+    ],
+    related: [],
+  },
+};
+
 function getProductIdFromURL() {
   const params = new URLSearchParams(window.location.search);
   return (
@@ -270,6 +305,12 @@ document.addEventListener("DOMContentLoaded", function () {
   let couponAmountValue = 0;
   let currentProduct = null;
 
+  if (couponCheckbox) {
+    couponCheckbox.addEventListener("change", () => {
+      updateBestPrice();
+    });
+  }
+
   function updateInfoRow(field, text) {
     if (!productInfoTable) return;
     const target = productInfoTable.querySelector(
@@ -282,11 +323,24 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function setMainImage(url, index = 0, total = 0, productName = "") {
     if (mainImage) {
-      mainImage.src = url || PDP_FALLBACK_IMAGE;
+      const imageUrl = url || PDP_FALLBACK_IMAGE;
+      mainImage.src = imageUrl;
       mainImage.alt = productName ? `${productName} 이미지` : "상품 이미지";
+      // 이미지가 로드되면 표시
+      if (imageUrl) {
+        mainImage.style.display = "block";
+      }
     }
     if (imageCounter) {
       imageCounter.textContent = total > 1 ? `${index + 1}/${total}` : "";
+    }
+    // 히어로 이미지도 업데이트 (사이즈 테이블 밑)
+    const heroImageBelowSize = document.getElementById("hero-image-below-size");
+    if (heroImageBelowSize) {
+      const imageUrl = url || PDP_FALLBACK_IMAGE;
+      heroImageBelowSize.src = imageUrl;
+      heroImageBelowSize.alt = productName ? `${productName} 상세 이미지` : "상품 상세 이미지";
+      heroImageBelowSize.style.display = imageUrl ? "block" : "none";
     }
   }
 
@@ -426,6 +480,19 @@ document.addEventListener("DOMContentLoaded", function () {
     bestPriceEl.style.display = "flex";
   }
 
+  function getDemoData(productId) {
+    const demo = DEMO_PRODUCTS[productId];
+    if (!demo) return null;
+    const clonedProduct = { ...demo.product };
+    return {
+      ok: true,
+      product: clonedProduct,
+      images: Array.isArray(demo.images) ? [...demo.images] : [],
+      related: Array.isArray(demo.related) ? [...demo.related] : [],
+      source: clonedProduct.__source || "demo",
+    };
+  }
+
   async function initProductDetail() {
     const productId = getProductIdFromURL();
     const sourceParam = getProductSourceFromURL();
@@ -436,6 +503,7 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
+    let data = null;
     try {
       const params = new URLSearchParams();
       params.set("op", "product_detail");
@@ -456,39 +524,51 @@ document.addEventListener("DOMContentLoaded", function () {
           errorText,
           requestUrl
         );
-        showProductError("상품 정보를 불러오지 못했습니다.");
-        return;
+      } else {
+        data = await response.json();
       }
-
-      const data = await response.json();
-      const product = data?.product;
-      const finalSource =
-        product?.__source || data?.source || sourceParam || "";
-      currentProduct = product ? { ...product, __source: finalSource } : null;
-
-      if (!product) {
-        showProductError("상품 정보를 찾을 수 없습니다.");
-        return;
-      }
-
-      const imageList = Array.isArray(data?.images)
-        ? data.images
-            .map((item) => (typeof item === "string" ? item : item?.image_url))
-            .filter((url) => typeof url === "string" && url)
-        : [];
-
-      populateProductDetail(
-        { ...product, __source: finalSource },
-        imageList,
-        data?.related || []
-      );
     } catch (error) {
       console.error("[PDP] detail load error:", error);
-      showProductError("상품 정보를 불러오지 못했습니다.");
     }
+
+    const demoData = getDemoData(productId);
+    if (demoData?.product) {
+      console.warn("[PDP] demo data override applied for", productId);
+      const finalSource = demoData.source || sourceParam || "demo";
+      currentProduct = { ...demoData.product, __source: finalSource };
+      populateProductDetail(currentProduct, demoData.images, demoData.related);
+      return;
+    }
+
+    if (!data || !data.product) {
+      showProductError("상품 정보를 불러오지 못했습니다.");
+      return;
+    }
+
+    const product = data.product;
+    const finalSource = product?.__source || data?.source || sourceParam || "";
+    currentProduct = product ? { ...product, __source: finalSource } : null;
+
+    const imageList = Array.isArray(data?.images)
+      ? data.images
+          .map((item) => (typeof item === "string" ? item : item?.image_url))
+          .filter((url) => typeof url === "string" && url)
+      : [];
+
+    populateProductDetail(
+      { ...product, __source: finalSource },
+      imageList,
+      data?.related || []
+    );
   }
 
   function populateProductDetail(product, images, related) {
+    // 데이터 로드 후 컨테이너 표시
+    const productDetailContainer = document.getElementById("product-detail-container");
+    if (productDetailContainer) {
+      productDetailContainer.style.display = "block";
+    }
+    
     const productName = product?.product_name || product?.name || "상품";
     document.title = `${product?.brand || "FITPL"} ${productName} - FITPL`;
 
@@ -630,11 +710,17 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
 
-    if (likeCountEl) {
-      const likeCount = Number(
-        product?.favorite_count ?? product?.like_count ?? 0
+    // 좋아요 수 초기화: review_count를 좋아요 수로 사용 (.like-button 내부)
+    const likeButtonForInit = document.querySelector(".like-button");
+    const likeCountInButton = likeButtonForInit?.querySelector(".like-count");
+    if (likeCountInButton) {
+      const initialLikeCount = Number(
+        product?.review_count ?? product?.reviews ?? 0
       );
-      likeCountEl.textContent = likeCount ? formatCount(likeCount, "개") : "0";
+      likeCountInButton.textContent = initialLikeCount ? formatCount(initialLikeCount, "") : "0";
+      // 초기 좋아요 수를 데이터 속성에 저장 (토글 계산용)
+      likeCountInButton.dataset.initialCount = String(initialLikeCount);
+      likeCountInButton.dataset.currentCount = String(initialLikeCount);
     }
 
     const seasonLabel =
@@ -696,6 +782,39 @@ document.addEventListener("DOMContentLoaded", function () {
     renderRelatedProducts(Array.isArray(related) ? related : []);
 
     updateBestPrice();
+
+    const cartButton = document.querySelector(".cart-button");
+    if (cartButton) {
+      const productId =
+        product?.product_id || product?.id || product?.productId || "";
+      if (productId) {
+        const params = new URLSearchParams();
+        params.set("product_id", productId);
+        const sourceValue = product?.__source || product?.source || sourceParam;
+        if (sourceValue) params.set("source", sourceValue);
+        if (product?.region_id) params.set("region_id", product.region_id);
+        cartButton.href = `../cart/index.html?${params.toString()}`;
+        const cartPayload = {
+          product_id: productId,
+          product: { ...product },
+          images: Array.isArray(images) ? [...images] : [],
+          region_id: product?.region_id ?? null,
+          source: sourceValue || null,
+        };
+        cartButton.addEventListener("click", () => {
+          try {
+            localStorage.setItem(
+              "fitpl_cart_item",
+              JSON.stringify(cartPayload)
+            );
+          } catch (error) {
+            console.warn("[PDP] cart item store failed:", error);
+          }
+        });
+      } else {
+        cartButton.href = "../cart/index.html";
+      }
+    }
   }
 
   initProductDetail();
@@ -726,20 +845,38 @@ document.addEventListener("DOMContentLoaded", function () {
   // 좋아요 버튼
   const likeButton = document.querySelector(".like-button");
   if (likeButton) {
+    let isLiked = false; // 현재 좋아요 상태 추적
+    
     likeButton.addEventListener("click", function () {
       const heartIcon = this.querySelector("svg path");
-      const likeCount = this.querySelector(".like-count");
-
-      if (heartIcon.style.fill === "red") {
+      const likeCountEl = this.querySelector(".like-count");
+      
+      if (!likeCountEl) return;
+      
+      // 현재 좋아요 수 가져오기
+      let currentCount = Number(likeCountEl.dataset.currentCount || likeCountEl.dataset.initialCount || 0);
+      
+      if (isLiked) {
+        // 좋아요 해제: -1
+        isLiked = false;
         heartIcon.style.fill = "none";
         heartIcon.style.stroke = "currentColor";
-        likeCount.textContent = "798";
+        currentCount = Math.max(0, currentCount - 1);
       } else {
-        heartIcon.style.fill = "red";
-        heartIcon.style.stroke = "red";
-        likeCount.textContent = "799";
+        // 좋아요 추가: +1
+        isLiked = true;
+        heartIcon.style.fill = "#f31110";
+        heartIcon.style.stroke = "#f31110";
+        currentCount = currentCount + 1;
       }
+      
+      // 좋아요 수 업데이트
+      likeCountEl.dataset.currentCount = String(currentCount);
+      likeCountEl.textContent = currentCount > 0 ? formatCount(currentCount, "") : "0";
     });
+    
+    // 페이지 로드 시 좋아요 수를 기반으로 초기 상태 설정
+    // (초기화는 populateProductDetail에서 이미 수행됨)
   }
 
   // 장바구니 버튼
@@ -785,57 +922,6 @@ document.addEventListener("DOMContentLoaded", function () {
       alert("쿠폰 받기 페이지로 이동합니다.");
     });
   }
-
-  // 최대혜택가 계산 (쿠폰 20% 적용)
-  const couponCheckbox = document.querySelector(".coupon-checkbox");
-  const bestPriceEl = document.getElementById("best-price");
-  const bestPriceAmountEl = document.getElementById("best-price-amount");
-  const salePriceEl = document.querySelector(".sale-price");
-  const originalPriceEl = document.querySelector(".original-price");
-
-  // 원래 가격 저장 (복원용) - HTML에서 읽어온 원본 가격
-  let originalSalePrice = "180,900원"; // HTML의 원본 가격
-
-  function parseCurrency(text) {
-    const digits = (text || "").replace(/[^0-9]/g, "");
-    return digits ? Number(digits) : 0;
-  }
-
-  function formatCurrency(num) {
-    return num.toLocaleString("ko-KR");
-  }
-
-  function updateBestPrice() {
-    if (!salePriceEl || !bestPriceEl || !couponCheckbox) return;
-
-    const originalPrice = parseCurrency(originalSalePrice); // 원본 가격 180,900원
-
-    if (!couponCheckbox.checked) {
-      // 쿠폰 체크 해제 시 최대혜택가 숨김
-      bestPriceEl.style.display = "none";
-      console.log("쿠폰 해제 - 최대혜택가 숨김");
-      return;
-    }
-
-    // 쿠폰 체크 시 sale-price는 그대로 유지하고 최대혜택가만 표시
-    const discounted = Math.round(originalPrice * 0.8); // 180,900 * 0.8 = 144,720
-
-    // 최대혜택가만 업데이트 (sale-price는 변경하지 않음)
-    bestPriceAmountEl.textContent = `${formatCurrency(discounted)}원`;
-    bestPriceEl.style.display = "flex";
-
-    console.log(
-      "쿠폰 적용 - 최대혜택가 표시:",
-      `${formatCurrency(discounted)}원`
-    );
-  }
-
-  if (couponCheckbox) {
-    couponCheckbox.addEventListener("change", updateBestPrice);
-  }
-
-  // 초기 표시
-  updateBestPrice();
 
   // 메인 탭 네비게이션 (새로 추가)
   const mainTabButtons = document.querySelectorAll(".main-tab-button");

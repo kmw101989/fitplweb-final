@@ -196,36 +196,51 @@
 
             <!-- Order Items Section -->
             <div class="order-items-section">
-              <h3 class="section-title">주문 상품 1개</h3>
+              <h3 class="section-title" id="cart-order-title">주문 상품 1개</h3>
+              <div id="cart-empty-message" class="cart-empty" hidden>
+                장바구니에 담긴 상품이 없습니다.
+              </div>
               <div class="order-items-container">
                 <div class="order-item">
                   <div class="item-image">
-                    <div class="image-placeholder"></div>
+                    <img
+                      id="cart-product-image"
+                      src=""
+                      alt="장바구니 상품 이미지"
+                      class="item-image-thumb"
+                      loading="lazy"
+                    />
                   </div>
                   <div class="item-info">
-                    <div class="brand">밴웍스</div>
-                    <div class="product-name">
-                      BALANCE TYPO 롱슬리브 (VLS0074) 블랙
+                    <div class="brand" id="cart-product-brand">브랜드</div>
+                    <div class="product-name" id="cart-product-name">
+                      상품명을 불러오는 중입니다.
                     </div>
-                    <div class="size-info">L / 1개</div>
+                    <div class="size-info" id="cart-product-size">FREE / 1개</div>
                     <div class="price-info">
-                      <span class="original-price">33,900원</span>
-                      <span class="sale-price">29,400원</span>
+                      <span class="original-price" id="cart-product-original"
+                        >0원</span
+                      >
+                      <span class="sale-price" id="cart-product-sale">0원</span>
                     </div>
                   </div>
                 </div>
-                <div class="delivery-date">
-                  <span>10.13(월) 도착 예정</span>
+                <div class="delivery-date" id="cart-delivery-info">
+                  <span id="cart-delivery-text">배송 예정일을 안내합니다.</span>
                   <button class="close-btn"></button>
                 </div>
-                <button class="coupon-btn">
+                <button class="coupon-btn" id="cart-coupon-button">
                   FitPl 런칭 기념 20% 쿠폰 적용
                 </button>
               </div>
 
               <!-- Snap Link Components -->
-              <h3 class="snap-title">유사한 상품을 활용한 스냅 코디</h3>
-              <div class="snap-components-container">
+              <h3 class="snap-title" id="cart-reco-title">맞춤 추천 상품</h3>
+              <div
+                class="snap-components-container"
+                id="cart-reco-container"
+                hidden
+              >
                 <div class="snap-link-component">
                   <div class="snap-link-container">
                     <div class="snap-image-container">
@@ -541,11 +556,11 @@
               <h3 class="summary-title">결제 금액</h3>
               <div class="summary-item">
                 <span>상품 금액</span>
-                <span>33,900원</span>
+                <span id="cart-summary-product">0원</span>
               </div>
               <div class="summary-item">
                 <span>할인 금액</span>
-                <span class="discount">-4,500원</span>
+                <span class="discount" id="cart-summary-discount">-0원</span>
               </div>
               <div class="summary-item">
                 <span>배송비</span>
@@ -554,8 +569,10 @@
               <div class="total-payment">
                 <span>총 결제 금액</span>
                 <div class="total-amount">
-                  <span class="discount-percent">13%</span>
-                  <span class="total-price">29,400원</span>
+                  <span class="discount-percent" id="cart-summary-percent"
+                    >0%</span
+                  >
+                  <span class="total-price" id="cart-summary-total">0원</span>
                 </div>
               </div>
             </div>
@@ -571,17 +588,19 @@
               </div>
               <div class="benefit-item">
                 <span>후기 적립</span>
-                <span>최대 1,500원</span>
+                <span id="cart-benefit-detail">최대 0원</span>
               </div>
               <div class="total-benefit">
                 <span>총 적립 금액</span>
-                <span>1,500원</span>
+                <span id="cart-total-benefit">0원</span>
               </div>
               <div class="horizontal-divider"></div>
               <div class="order-benefit">
                 <span>이번 주문으로 받을 혜택</span>
                 <button class="info-btn"></button>
-                <span class="benefit-amount">8,000원</span>
+                <span class="benefit-amount" id="cart-order-benefit"
+                  >0원</span
+                >
               </div>
             </div>
 
@@ -606,9 +625,13 @@
             <div class="payment-section">
               <div class="payment-type-info">
                 <span>카드 결제</span>
-                <span class="benefit-text">최대 1,500원 적립</span>
+                <span class="benefit-text" id="cart-payment-benefit"
+                  >적립 혜택 정보를 불러오는 중입니다.</span
+                >
               </div>
-              <button class="payment-btn">29,400원 결제하기</button>
+              <button class="payment-btn" id="cart-payment-button">
+                0원 결제하기
+              </button>
               <button class="continue-shopping-btn">계속 쇼핑하기</button>
             </div>
           </div>
@@ -758,6 +781,49 @@
 
             <div class="form-actions">
               <button type="submit" class="submit-btn" id="entrySubmit">제출</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact Modal -->
+    <div class="contact-modal-overlay" id="contactModal">
+      <div class="contact-modal">
+        <button class="contact-modal-close" id="contactModalClose" aria-label="닫기">×</button>
+        <div class="contact-modal-content">
+          <h3>문의하기</h3>
+          <p>이메일을 입력해주시면 빠르게 연락드리겠습니다.</p>
+          <form id="contactForm">
+            <div class="form-field">
+              <label for="contactEmail">이메일</label>
+              <input
+                type="email"
+                id="contactEmail"
+                name="email"
+                class="contact-input"
+                placeholder="example@email.com"
+                required
+                aria-required="true"
+              />
+              <div class="error-message" id="contactError" aria-live="polite"></div>
+            </div>
+            <div class="form-field">
+              <label for="contactMessage">문의내용 (선택사항)</label>
+              <textarea
+                id="contactMessage"
+                name="message"
+                class="contact-textarea"
+                rows="4"
+                placeholder="문의사항을 입력해주세요"
+                aria-label="문의내용"
+              ></textarea>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="contact-submit-btn" id="contactSubmit">
+                <span class="btn-text">제출</span>
+                <span class="btn-loading" style="display: none;">전송 중...</span>
+              </button>
             </div>
           </form>
         </div>

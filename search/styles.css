@@ -156,6 +156,13 @@ body {
   transform: translateY(-1px);
 }
 
+.category-tag.selected {
+  border: 2px solid #245eff;
+  background-color: #f0f4ff;
+  color: #245eff;
+  font-weight: 600;
+}
+
 /* 프레임 정보 패널 */
 .frame-info-panel {
   position: fixed;

@@ -178,42 +178,8 @@ if (logoutBtn) {
   });
 }
 
-// 국가 필터 기능
-filterBtns.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    // 특정 국가 버튼 클릭 시 해당 NationX-1 페이지로 이동
-    const label = btn.textContent.trim();
-    const countryRoutes = {
-      베트남: "../Nation1-1/index.html",
-      중국: "../Nation2-1/index.html",
-      홍콩: "../Nation3-1/index.html",
-      대만: "../Nation4-1/index.html",
-      태국: "../Nation5-1/index.html",
-      라오스: "../Nation6-1/index.html",
-      싱가포르: "../Nation7-1/index.html",
-      미국: "../Nation8-1/index.html",
-      호주: "../Nation9-1/index.html",
-      뉴질랜드: "../Nation10-1/index.html",
-      프랑스: "../Nation11-1/index.html",
-    };
-    if (countryRoutes[label]) {
-      window.location.href = countryRoutes[label];
-      return;
-    }
-
-    // 모든 버튼에서 active 클래스 제거
-    filterBtns.forEach((b) => b.classList.remove("active"));
-    // 클릭된 버튼에 active 클래스 추가
-    btn.classList.add("active");
-
-    // 여기서 실제 필터링 로직을 구현할 수 있습니다
-    const selectedCountry = btn.textContent;
-    console.log("선택된 국가:", selectedCountry);
-
-    // 예시: 상품 필터링
-    filterProductsByCountry(selectedCountry);
-  });
-});
+// 국가 필터 기능 - 리디렉션만 수행 (HTML의 href 속성 사용)
+// JavaScript 이벤트 리스너 제거: 모든 국가 버튼은 <a> 태그의 href로 자동 리디렉션됨
 
 // 카테고리 필터 기능
 categoryBtns.forEach((btn) => {
@@ -602,12 +568,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 오른쪽 배너: 일본 페이지로 리디렉션 (나중에 구현 예정)
+  // 오른쪽 배너: 일본 페이지로 리디렉션
   if (popularBanner) {
     popularBanner.style.cursor = "pointer";
     popularBanner.addEventListener("click", () => {
-      // TODO: 일본 페이지 구현 시 리디렉션 추가
-      // window.location.href = "../Nation1-1/index.html";
+      window.location.href = "../Detailpage/index.html?country=일본";
     });
   }
 });
@@ -2026,10 +1991,44 @@ async function loadAndRenderGuestProducts() {
   return loadAndRenderProducts();
 }
 
+// 페이지 로드 시 초기화
+function initializeMainPage() {
+  // URL 파라미터 확인 및 정리 (메인페이지는 country 파라미터 불필요)
+  const params = new URLSearchParams(window.location.search);
+  const countryParam = params.get("country");
+  
+  if (countryParam) {
+    // country 파라미터가 있으면 제거하고 URL 정리
+    params.delete("country");
+    const newUrl = params.toString() 
+      ? `${window.location.pathname}?${params.toString()}`
+      : window.location.pathname;
+    window.history.replaceState({}, "", newUrl);
+  }
+  
+  // 필터 버튼은 리디렉션만 수행하므로 active 상태 관리 불필요
+  // (HTML에서 ALL 버튼만 active 클래스를 가짐)
+}
+
 // 페이지 로드 시 제품 표시
 document.addEventListener("DOMContentLoaded", () => {
+  // 메인페이지 초기화
+  initializeMainPage();
+  
   // 팝업이 닫힌 후 또는 페이지 로드 시 제품 로드
   setTimeout(() => {
     loadAndRenderGuestProducts();
   }, 1000); // 팝업 표시 후 조금 지연
+});
+
+// 뒤로가기/앞으로가기 이벤트 처리 (bfcache 대응)
+window.addEventListener("pageshow", (event) => {
+  // bfcache에서 복원된 경우
+  if (event.persisted) {
+    initializeMainPage();
+    // 제품 다시 로드
+    setTimeout(() => {
+      loadAndRenderGuestProducts();
+    }, 100);
+  }
 });

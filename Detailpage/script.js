@@ -511,13 +511,17 @@ function renderProductsToGrid(
   grid,
   products,
   maxProducts = 9,
-  skipButtonSetup = false
+  skipButtonSetup = false,
+  preserveOriginalData = false  // 원본 데이터 보존 옵션
 ) {
   // 기존 모든 제품 제거 (하드코딩된 것들 포함)
   grid.innerHTML = "";
 
   // 제품 데이터를 그리드에 저장 (더보기 버튼에서 사용)
-  grid.dataset.allProducts = JSON.stringify(products);
+  // preserveOriginalData가 true이면 원본 데이터를 유지 (정렬 시 사용)
+  if (!preserveOriginalData) {
+    grid.dataset.allProducts = JSON.stringify(products);
+  }
 
   // API에서 받아온 제품들만 표시
   products.slice(0, maxProducts).forEach((product) => {
@@ -733,26 +737,33 @@ weatherTags.forEach((tag) => {
 // 활동 태그 한글 텍스트를 API activity_tag로 매핑
 function mapActivityTagToAPI(한글태그) {
   const mapping = {
-    "자연체험": ["national_park", "hiking", "beach", "zoo", "aquarium"],
-    "휴양": ["beach", "hot_spring", "yacht_cruise", "cafe_hopping"],
+    "자연체험": ["national_park", "zoo", "aquarium"],
+    "휴양": ["beach", "hot_spring"],
     "테마파크": ["theme_park"],
-    "레저": ["yacht_cruise", "observation_deck", "outlet_mall", "hiking"],
+    "레저": ["yacht_cruise", "observation_deck"],
     "스포츠": ["hiking"],
-    "도시관광": ["city_tour", "market_night", "cafe_hopping", "observation_deck", "cathedral_church", "temple_shrine", "outlet_mall"],
+    "도시관광": ["city_tour", "market_night", "cafe_hopping", "outlet_mall"],
     "문화/예술": ["art_museum", "museum", "cathedral_church", "temple_shrine"],
-    "+더보기": null, // 더보기는 필터링 안함
   };
   return mapping[한글태그] || null;
 }
 
-// 제품을 activity_tag로 정렬 (일치하는 것을 상위로)
+// 제품을 activity_tag로 정렬 (일치하는 것을 상위로, 신발은 아래로)
 function sortProductsByActivityTag(products, activityTags) {
   if (!activityTags || !Array.isArray(activityTags) || activityTags.length === 0 || !products || products.length === 0) {
     return products;
   }
 
-  // activity_tag 배열을 소문자로 정규화
-  const normalizedTags = activityTags.map(tag => String(tag).toLowerCase().trim());
+  // activity_tag 배열을 소문자로 정규화 (전역 변수로 만들어서 디버깅에서 사용 가능하게)
+  window.normalizedTags = activityTags.map(tag => String(tag).toLowerCase().trim());
+  const normalizedTags = window.normalizedTags;
+  
+  // 신발 카테고리 확인 함수
+  const isShoes = (product) => {
+    const mainCategory = String(product?.main_category || "").toLowerCase().trim();
+    const subCategory = String(product?.sub_category || "").toLowerCase().trim();
+    return mainCategory === "shoes" || subCategory.includes("shoes") || subCategory.includes("신발");
+  };
   
   return [...products].sort((a, b) => {
     const aTag = String(a?.activity_tag || "").toLowerCase().trim();
@@ -762,11 +773,19 @@ function sortProductsByActivityTag(products, activityTags) {
     const aMatch = normalizedTags.includes(aTag);
     const bMatch = normalizedTags.includes(bTag);
     
-    // 일치하는 것을 상위로
+    // 신발 여부 확인
+    const aIsShoes = isShoes(a);
+    const bIsShoes = isShoes(b);
+    
+    // 1순위: activity_tag 일치 여부
     if (aMatch && !bMatch) return -1;
     if (!aMatch && bMatch) return 1;
     
-    // 둘 다 일치하거나 둘 다 불일치하면 원래 순서 유지
+    // 2순위: 둘 다 일치하거나 둘 다 불일치한 경우, 신발은 아래로
+    if (aIsShoes && !bIsShoes) return 1;  // a가 신발이면 아래로
+    if (!aIsShoes && bIsShoes) return -1; // b가 신발이면 아래로
+    
+    // 둘 다 신발이거나 둘 다 신발이 아니면 원래 순서 유지
     return 0;
   });
 }
@@ -776,14 +795,6 @@ activityTags.forEach((tag) => {
   tag.addEventListener("click", async (e) => {
     const clickedTag = e.target;
     const tagText = clickedTag.textContent.trim();
-    
-    // +더보기는 필터링 안함
-    if (tagText === "+더보기") {
-      const section = clickedTag.closest("section");
-      const sectionActivityTags = section.querySelectorAll(".activity-tag");
-      switchTab(clickedTag, sectionActivityTags);
-      return;
-    }
     
     // active 상태 토글
     const section = clickedTag.closest("section");
@@ -814,8 +825,33 @@ activityTags.forEach((tag) => {
       
       console.log(`[활동 태그] ${tagText} 클릭, activity_tags:`, activityTags);
       
+      // 디버깅: 실제 제품들의 activity_tag 값 확인
+      const activityTagCounts = {};
+      const activityTagValues = [];
+      allProducts.forEach(p => {
+        const tag = String(p?.activity_tag || 'null').toLowerCase();
+        activityTagCounts[tag] = (activityTagCounts[tag] || 0) + 1;
+        if (p?.activity_tag) {
+          activityTagValues.push(String(p.activity_tag).toLowerCase());
+        }
+      });
+      console.log(`[활동 태그 디버깅] ${tagText} 클릭 시:`);
+      console.log(`  - 전체 제품 수: ${allProducts.length}`);
+      console.log(`  - activity_tag가 있는 제품: ${allProducts.filter(p => p?.activity_tag).length}`);
+      console.log(`  - activity_tag 분포:`, activityTagCounts);
+      console.log(`  - 검색할 태그들:`, activityTags);
+      console.log(`  - 실제 DB의 activity_tag 값 샘플 (최대 10개):`, [...new Set(activityTagValues)].slice(0, 10));
+      
       // activity_tag 배열로 정렬
       const sortedProducts = sortProductsByActivityTag(allProducts, activityTags);
+      
+      // 일치하는 제품 수 확인
+      const normalizedTags = window.normalizedTags || activityTags.map(tag => String(tag).toLowerCase().trim());
+      const matchingProducts = sortedProducts.filter(p => {
+        const productTag = String(p?.activity_tag || "").toLowerCase().trim();
+        return normalizedTags.includes(productTag);
+      });
+      console.log(`  - ${tagText} 태그와 일치하는 제품 수: ${matchingProducts.length}`);
       
       // 제품 목록에 activity_tag가 있는지 확인
       const hasActivityTag = sortedProducts.some(p => p?.activity_tag);
@@ -827,7 +863,8 @@ activityTags.forEach((tag) => {
       }
       
       // 일치하는 제품이 상위로 정렬된 목록으로 재렌더링
-      renderProductsToGrid(productGrid, sortedProducts, 9, false);
+      // preserveOriginalData=true로 설정하여 원본 데이터를 유지
+      renderProductsToGrid(productGrid, sortedProducts, 9, false, true);
       
       console.log(`[활동 태그] 제품 정렬 완료: 총 ${sortedProducts.length}개`);
     } catch (error) {
@@ -1110,6 +1147,8 @@ refreshButtons.forEach((button) => {
 
 window.addEventListener("scroll", () => {
   const topNav = document.querySelector(".top-nav");
+  if (!topNav) return; // topNav가 없으면 종료
+  
   if (window.scrollY > 50) {
     topNav.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.1)";
   } else {

@@ -607,31 +607,70 @@ document.addEventListener("DOMContentLoaded", function () {
       if (userId) params.set("user_id", userId);
 
       const requestUrl = `/.netlify/functions/db?${params.toString()}`;
-      const response = await fetch(requestUrl);
+      console.log("[Cart] API 호출 시작:", requestUrl);
+      
+      const response = await fetch(requestUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      console.log("[Cart] API 응답 상태:", response.status, response.statusText);
 
       if (response.ok) {
-        data = await response.json();
+        try {
+          data = await response.json();
+          console.log("[Cart] API 응답 데이터:", {
+            hasProduct: !!data?.product,
+            hasImages: !!data?.images,
+            productId: data?.product?.product_id,
+          });
+        } catch (jsonError) {
+          console.error("[Cart] JSON 파싱 실패:", jsonError);
+          const text = await response.text();
+          console.error("[Cart] 응답 본문:", text.substring(0, 500));
+        }
       } else {
         const errorText = await response.text().catch(() => "");
-        console.warn(
+        console.error(
           "[Cart] API 호출 실패:",
-          response.status,
-          errorText,
-          requestUrl
+          {
+            status: response.status,
+            statusText: response.statusText,
+            error: errorText.substring(0, 200),
+            url: requestUrl,
+          }
         );
       }
     } catch (error) {
-      console.error("[Cart] 제품 정보 로드 실패:", error);
+      console.error("[Cart] 제품 정보 로드 실패:", {
+        error: error.message,
+        stack: error.stack,
+        name: error.name,
+        productId: productId,
+      });
+      
+      // 네트워크 에러인지 확인
+      if (error.message.includes("fetch") || error.name === "TypeError") {
+        console.error("[Cart] 네트워크 연결 문제로 보입니다. 서버 연결을 확인해주세요.");
+      }
     }
 
     if (!data || !data.product) {
+      console.warn("[Cart] API에서 제품 데이터를 가져오지 못함:", {
+        hasData: !!data,
+        hasProduct: !!data?.product,
+        productId: productId,
+      });
+      
       const demoData = getDemoProduct(productId);
       if (demoData?.product) {
         console.warn("[Cart] demo data fallback 사용", productId);
         renderCartProduct(demoData.product, demoData.images);
         return;
       }
-      showCartError("상품 정보를 불러오지 못했습니다.");
+      showCartError("상품 정보를 불러오지 못했습니다. 서버 연결을 확인해주세요.");
       return;
     }
 
@@ -843,7 +882,13 @@ document.addEventListener("DOMContentLoaded", function () {
         console.log('[contact] Response status:', response.status);
         
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: await response.text() }));
+          let errorData;
+          try {
+            errorData = await response.json();
+          } catch (jsonError) {
+            const errorText = await response.text();
+            errorData = { error: errorText };
+          }
           console.error('[contact] Response error:', errorData);
           throw new Error(errorData.error || errorData.details || `HTTP ${response.status}`);
         }

@@ -316,19 +316,23 @@ navLinks.forEach((link) => {
 let lastScrollTop = 0;
 const header = document.querySelector(".top-nav");
 
-window.addEventListener("scroll", () => {
-  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+if (header) {
+  window.addEventListener("scroll", () => {
+    if (!header) return; // 추가 안전 체크
+    
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
 
-  if (scrollTop > lastScrollTop && scrollTop > 100) {
-    // 스크롤 다운
-    header.style.transform = "translateY(-100%)";
-  } else {
-    // 스크롤 업
-    header.style.transform = "translateY(0)";
-  }
+    if (scrollTop > lastScrollTop && scrollTop > 100) {
+      // 스크롤 다운
+      header.style.transform = "translateY(-100%)";
+    } else {
+      // 스크롤 업
+      header.style.transform = "translateY(0)";
+    }
 
-  lastScrollTop = scrollTop;
-});
+    lastScrollTop = scrollTop;
+  });
+}
 
 // 상품 카드 클릭 이벤트
 const productCards = document.querySelectorAll(".product-card");

@@ -260,18 +260,18 @@
       <section class="country-filter">
         <div class="filter-container">
           <a href="index.html" class="filter-btn active">ALL</a>
-          <a href="../Detailpage/index.html?country=일본" class="filter-btn">일본</a>
-          <a href="../Detailpage/index.html?country=중국" class="filter-btn">중국</a>
-          <a href="../Detailpage/index.html?country=대만" class="filter-btn">대만</a>
-          <a href="../Detailpage/index.html?country=태국" class="filter-btn">태국</a>
-          <a href="../Detailpage/index.html?country=베트남" class="filter-btn">베트남</a>
-          <a href="../Detailpage/index.html?country=필리핀" class="filter-btn">필리핀</a>
-          <a href="../Detailpage/index.html?country=홍콩" class="filter-btn">홍콩</a>
-          <a href="../Detailpage/index.html?country=마카오" class="filter-btn">마카오</a>
-          <a href="../Detailpage/index.html?country=인도네시아" class="filter-btn">인도네시아</a>
-          <a href="../Detailpage/index.html?country=미주" class="filter-btn">미주</a>
-          <a href="../Detailpage/index.html?country=싱가포르" class="filter-btn">싱가포르</a>
-          <a href="../Detailpage/index.html?country=호주" class="filter-btn">호주</a>
+          <a href="../Detailpage/index.html?country=일본&source=button" class="filter-btn">일본</a>
+          <a href="../Detailpage/index.html?country=중국&source=button" class="filter-btn">중국</a>
+          <a href="../Detailpage/index.html?country=대만&source=button" class="filter-btn">대만</a>
+          <a href="../Detailpage/index.html?country=태국&source=button" class="filter-btn">태국</a>
+          <a href="../Detailpage/index.html?country=베트남&source=button" class="filter-btn">베트남</a>
+          <a href="../Detailpage/index.html?country=필리핀&source=button" class="filter-btn">필리핀</a>
+          <a href="../Detailpage/index.html?country=홍콩&source=button" class="filter-btn">홍콩</a>
+          <a href="../Detailpage/index.html?country=마카오&source=button" class="filter-btn">마카오</a>
+          <a href="../Detailpage/index.html?country=인도네시아&source=button" class="filter-btn">인도네시아</a>
+          <a href="../Detailpage/index.html?country=미주&source=button" class="filter-btn">미주</a>
+          <a href="../Detailpage/index.html?country=싱가포르&source=button" class="filter-btn">싱가포르</a>
+          <a href="../Detailpage/index.html?country=호주&source=button" class="filter-btn">호주</a>
         </div>
       </section>
 
@@ -1472,6 +1472,19 @@
     </div>
 
     <script src="/fitpl-ga-utils.js"></script>
+    <!-- fitpl_datalayer_patch는 선택적 로드 (없어도 오류 없음) -->
+    <script>
+      // fitpl_datalayer_patch 파일이 없어도 오류가 발생하지 않도록 처리
+      (function() {
+        const script = document.createElement('script');
+        script.src = '/fitpl_datalayer_patch_20251031_0204.js';
+        script.onerror = function() {
+          // 파일이 없어도 오류 로그만 출력하고 계속 진행
+          console.warn('[FitPl] fitpl_datalayer_patch 파일을 찾을 수 없습니다. 계속 진행합니다.');
+        };
+        document.head.appendChild(script);
+      })();
+    </script>
     <script src="/fitpl-website/script.js"></script>
   </body>
 </html>

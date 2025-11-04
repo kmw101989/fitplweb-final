@@ -39,7 +39,12 @@ function hideSearchModal() {
 
   function redirectToSearch() {
     console.log("[검색 리디렉션] 🔵🔵🔵 리디렉션 실행!");
-    window.location.href = "../search/index.html";
+    let url = "../search/index.html";
+    // utm_source 파라미터 유지
+    if (typeof window.preserveUTMParams === "function") {
+      url = window.preserveUTMParams(url);
+    }
+    window.location.href = url;
   }
 
   function initRedirect() {
@@ -310,7 +315,12 @@ function navigateToRegionPage(regionName) {
       const params = new URLSearchParams();
       params.set("country", country);
       params.set("region_id", regionId);
-      const url = `../Detailpage/index.html?${params.toString()}`;
+      params.set("source", "search"); // 검색창에서 이동
+      let url = `../Detailpage/index.html?${params.toString()}`;
+      // utm_source 파라미터 유지
+      if (typeof window.preserveUTMParams === "function") {
+        url = window.preserveUTMParams(url);
+      }
       console.log("[검색 디버깅] 최종 이동 URL:", url);
       window.location.href = url;
       return true;
@@ -341,14 +351,24 @@ function executeSearch() {
       const params = new URLSearchParams();
       params.set("country", activeCountry);
       params.set("region_id", defaultRegionId);
-      const url = `../Detailpage/index.html?${params.toString()}`;
+      params.set("source", "search"); // 검색창에서 이동
+      let url = `../Detailpage/index.html?${params.toString()}`;
+      // utm_source 파라미터 유지
+      if (typeof window.preserveUTMParams === "function") {
+        url = window.preserveUTMParams(url);
+      }
       console.log("[검색] 이동 URL:", url);
       window.location.href = url;
       return true;
     } else {
       const params = new URLSearchParams();
       params.set("country", activeCountry);
-      const url = `../Detailpage/index.html?${params.toString()}`;
+      params.set("source", "search"); // 검색창에서 이동
+      let url = `../Detailpage/index.html?${params.toString()}`;
+      // utm_source 파라미터 유지
+      if (typeof window.preserveUTMParams === "function") {
+        url = window.preserveUTMParams(url);
+      }
       console.log("[검색] 이동 URL (기본 지역 없음):", url);
       window.location.href = url;
       return true;
@@ -854,7 +874,12 @@ productCards.forEach((card) => {
     }
 
     // Detail 페이지로 이동
-    window.location.href = "../Detail/navigation.html";
+    let url = "../Detail/navigation.html";
+    // utm_source 파라미터 유지
+    if (typeof window.preserveUTMParams === "function") {
+      url = window.preserveUTMParams(url);
+    }
+    window.location.href = url;
   });
 
   // 클릭 가능한 커서 스타일 추가
@@ -1085,7 +1110,12 @@ document.addEventListener("DOMContentLoaded", () => {
   if (popularBanner) {
     popularBanner.style.cursor = "pointer";
     popularBanner.addEventListener("click", () => {
-      window.location.href = "../Detailpage/index.html?country=일본";
+      let url = "../Detailpage/index.html?country=일본&source=banner";
+      // utm_source 파라미터 유지
+      if (typeof window.preserveUTMParams === "function") {
+        url = window.preserveUTMParams(url);
+      }
+      window.location.href = url;
     });
   }
 });
@@ -1274,11 +1304,60 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       `;
 
-      // product-card 클릭 이벤트
-      card.style.cursor = "pointer";
+      // product-card 클릭 이벤트 (로드 전에는 비활성화)
+      card.dataset.loaded = "false";
+      card.style.pointerEvents = "none";
+      card.style.opacity = "0.6";
+      card.classList.add("product-loading");
+
+      // 이미지 로드 완료 후 활성화
+      const img = card.querySelector("img");
+      if (img) {
+        if (img.complete) {
+          card.dataset.loaded = "true";
+          card.style.pointerEvents = "auto";
+          card.style.opacity = "1";
+          card.style.cursor = "pointer";
+          card.classList.remove("product-loading");
+        } else {
+          img.addEventListener("load", () => {
+            card.dataset.loaded = "true";
+            card.style.pointerEvents = "auto";
+            card.style.opacity = "1";
+            card.style.cursor = "pointer";
+            card.classList.remove("product-loading");
+          });
+          img.addEventListener("error", () => {
+            card.dataset.loaded = "true";
+            card.style.pointerEvents = "auto";
+            card.style.opacity = "1";
+            card.style.cursor = "pointer";
+            card.classList.remove("product-loading");
+          });
+        }
+      } else {
+        // 이미지가 없으면 즉시 활성화
+        card.dataset.loaded = "true";
+        card.style.pointerEvents = "auto";
+        card.style.opacity = "1";
+        card.style.cursor = "pointer";
+        card.classList.remove("product-loading");
+      }
+
       card.addEventListener("click", (e) => {
+        // 제품이 로드되지 않았으면 클릭 막기
+        if (card.dataset.loaded !== "true") {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
         if (!e.target.closest(".like-btn")) {
-          window.location.href = "../Detail/navigation.html";
+          let url = "../Detail/navigation.html";
+          // utm_source 파라미터 유지
+          if (typeof window.preserveUTMParams === "function") {
+            url = window.preserveUTMParams(url);
+          }
+          window.location.href = url;
         }
       });
 
@@ -1484,7 +1563,12 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.target.closest(".like-btn")) {
           return;
         }
-        window.location.href = "../Detail/navigation.html";
+        let url = "../Detail/navigation.html";
+        // utm_source 파라미터 유지
+        if (typeof window.preserveUTMParams === "function") {
+          url = window.preserveUTMParams(url);
+        }
+        window.location.href = url;
       });
     });
 
@@ -2267,10 +2351,12 @@ function createProductCard(product) {
 
   return `
     <div
-      class="product-card"
+      class="product-card product-loading"
       data-product-id="${product.product_id || ""}"
       data-source="${dataSource}"
       data-region-id="${dataRegionId}"
+      data-loaded="false"
+      style="pointer-events: none; opacity: 0.6; cursor: not-allowed;"
     >
       <div class="product-image">
         <img src="${imgUrl}" alt="${name}" loading="lazy" onerror="this.src='${FALLBACK_IMAGE_URL}'" />
@@ -2318,12 +2404,52 @@ function renderProductsToGrid(selector, products, maxProducts = 10) {
     grid.insertAdjacentHTML("beforeend", createProductCard(product));
   });
 
+  // 제품 카드 로드 완료 표시 (이미지 로드 완료 후)
+  const productCards = grid.querySelectorAll(".product-card");
+  productCards.forEach((card) => {
+    const img = card.querySelector("img");
+    if (img) {
+      if (img.complete) {
+        // 이미지가 이미 로드된 경우
+        enableProductCard(card);
+      } else {
+        // 이미지 로드 대기
+        img.addEventListener("load", () => {
+          enableProductCard(card);
+        });
+        img.addEventListener("error", () => {
+          // 이미지 로드 실패해도 카드 활성화
+          enableProductCard(card);
+        });
+        // 타임아웃: 3초 후에도 로드되지 않으면 활성화
+        setTimeout(() => {
+          if (card.dataset.loaded !== "true") {
+            enableProductCard(card);
+          }
+        }, 3000);
+      }
+    } else {
+      // 이미지가 없는 경우 즉시 활성화
+      enableProductCard(card);
+    }
+  });
+
   // 좋아요 버튼 및 클릭 이벤트 추가
   attachProductEvents(grid);
 
   console.log(
     `${productsToShow.length}개 제품을 ${selector}에 렌더링했습니다.`
   );
+}
+
+// 제품 카드 활성화 함수
+function enableProductCard(card) {
+  if (!card) return;
+  card.dataset.loaded = "true";
+  card.classList.remove("product-loading");
+  card.style.pointerEvents = "auto";
+  card.style.opacity = "1";
+  card.style.cursor = "pointer";
 }
 
 // 제품 이벤트 핸들러 추가 (공통 함수)
@@ -2347,8 +2473,28 @@ function attachProductEvents(container) {
 
   // 제품 카드 클릭 이벤트 (상세 페이지로 이동)
   container.querySelectorAll(".product-card").forEach((card) => {
-    card.style.cursor = "pointer";
+    // 제품 로드 상태 확인 (data-loaded 속성으로 제어)
+    const isLoaded = card.dataset.loaded === "true";
+
+    if (isLoaded) {
+      card.style.cursor = "pointer";
+      card.style.pointerEvents = "auto";
+      card.classList.remove("product-loading");
+    } else {
+      card.style.cursor = "not-allowed";
+      card.style.pointerEvents = "none";
+      card.style.opacity = "0.6";
+      card.classList.add("product-loading");
+    }
+
     card.addEventListener("click", (e) => {
+      // 제품이 로드되지 않았으면 클릭 막기
+      if (card.dataset.loaded !== "true") {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
       if (e.target.closest(".like-btn")) return;
       const productId = card.dataset.productId;
       const source = card.dataset.source;
@@ -2358,9 +2504,18 @@ function attachProductEvents(container) {
         params.set("product_id", productId);
         if (source) params.set("source", source);
         if (regionId) params.set("region_id", regionId);
-        window.location.href = `../Detail/navigation.html?${params.toString()}`;
+        const url = `../Detail/navigation.html?${params.toString()}`;
+        // utm_source 파라미터 유지
+        window.location.href =
+          typeof window.preserveUTMParams === "function"
+            ? window.preserveUTMParams(url)
+            : url;
       } else {
-        window.location.href = "../Detail/navigation.html";
+        const url = "../Detail/navigation.html";
+        window.location.href =
+          typeof window.preserveUTMParams === "function"
+            ? window.preserveUTMParams(url)
+            : url;
       }
     });
   });
@@ -2419,6 +2574,27 @@ function renderProductsWithSections(
   });
   attachProductEvents(firstGrid);
 
+  // 첫 번째 섹션 제품 카드 로드 완료 표시
+  const firstSectionCards = firstGrid.querySelectorAll(".product-card");
+  firstSectionCards.forEach((card) => {
+    const img = card.querySelector("img");
+    if (img) {
+      if (img.complete) {
+        enableProductCard(card);
+      } else {
+        img.addEventListener("load", () => enableProductCard(card));
+        img.addEventListener("error", () => enableProductCard(card));
+        setTimeout(() => {
+          if (card.dataset.loaded !== "true") {
+            enableProductCard(card);
+          }
+        }, 3000);
+      }
+    } else {
+      enableProductCard(card);
+    }
+  });
+
   // 두 번째 섹션 이상이 있으면 추가 (스크롤 가능하게)
   if (sections.length > 1) {
     // 기존 두 번째 섹션 제거
@@ -2438,6 +2614,27 @@ function renderProductsWithSections(
         grid.insertAdjacentHTML("beforeend", createProductCard(product));
       });
       attachProductEvents(grid);
+
+      // 나머지 섹션 제품 카드 로드 완료 표시
+      const sectionCards = grid.querySelectorAll(".product-card");
+      sectionCards.forEach((card) => {
+        const img = card.querySelector("img");
+        if (img) {
+          if (img.complete) {
+            enableProductCard(card);
+          } else {
+            img.addEventListener("load", () => enableProductCard(card));
+            img.addEventListener("error", () => enableProductCard(card));
+            setTimeout(() => {
+              if (card.dataset.loaded !== "true") {
+                enableProductCard(card);
+              }
+            }, 3000);
+          }
+        } else {
+          enableProductCard(card);
+        }
+      });
 
       section.appendChild(grid);
       wrapper.appendChild(section);

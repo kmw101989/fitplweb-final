@@ -758,6 +758,17 @@
     </footer>
 
     <script src="../fitpl-ga-utils.js"></script>
+    <!-- fitpl_datalayer_patch는 선택적 로드 (없어도 오류 없음) -->
+    <script>
+      (function() {
+        const script = document.createElement('script');
+        script.src = '../fitpl_datalayer_patch_20251031_0204.js';
+        script.onerror = function() {
+          console.warn('[FitPl] fitpl_datalayer_patch 파일을 찾을 수 없습니다. 계속 진행합니다.');
+        };
+        document.head.appendChild(script);
+      })();
+    </script>
     <script src="navigation.js"></script>
   </body>
 </html>

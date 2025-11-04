@@ -1318,7 +1318,12 @@ document.addEventListener("DOMContentLoaded", function () {
   if (continueShoppingBtn) {
     continueShoppingBtn.addEventListener("click", function () {
       // Detailpage로 이동
-      window.location.href = "../Detailpage/index.html";
+      let url = "../Detailpage/index.html";
+      // utm_source 파라미터 유지
+      if (typeof window.preserveUTMParams === 'function') {
+        url = window.preserveUTMParams(url);
+      }
+      window.location.href = url;
     });
   }
 
@@ -1406,7 +1411,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
       // FITPL 링크인 경우 fitpl-website로 이동
       if (this.textContent.trim() === "FITPL") {
-        window.location.href = "../fitpl-website/index.html";
+        let url = "../fitpl-website/index.html";
+        // utm_source 파라미터 유지
+        if (typeof window.preserveUTMParams === 'function') {
+          url = window.preserveUTMParams(url);
+        }
+        window.location.href = url;
       } else {
         alert(`${this.textContent} 페이지로 이동합니다.`);
       }

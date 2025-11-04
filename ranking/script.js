@@ -193,7 +193,12 @@ function addProductCardEventListeners() {
       if (source) params.set("source", source);
       if (regionId) params.set("region_id", regionId);
 
-      window.location.href = `../Detail/navigation.html?${params.toString()}`;
+      let url = `../Detail/navigation.html?${params.toString()}`;
+      // utm_source 파라미터 유지
+      if (typeof window.preserveUTMParams === 'function') {
+        url = window.preserveUTMParams(url);
+      }
+      window.location.href = url;
     });
   });
 }

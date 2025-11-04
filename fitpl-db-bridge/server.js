@@ -201,13 +201,14 @@ app.get("/db", async (req, res) => {
         return res.status(400).json({ ok: false, error: "user_id required" });
       
       // tmp_current_user 테이블에 user_id 설정
-      await pool.query("TRUNCATE TABLE tmp_current_user");
-      await pool.query("INSERT INTO tmp_current_user VALUES (?)", [user_id]);
+      // REPLACE INTO 사용하여 중복 방지
+      await pool.query("REPLACE INTO tmp_current_user VALUES (?)", [user_id]);
       
       // 뷰에서 user_id 조건 제거 (뷰가 이미 tmp_current_user를 참조)
       // 제품 5292437 제외
+      // DDL 변경: reco_rank -> rn
       const [rows] = await pool.query(
-        `SELECT * FROM v_country_climate_top20_products WHERE product_id != '5292437' ORDER BY reco_rank ASC, product_id ASC LIMIT ?`,
+        `SELECT * FROM v_country_climate_top20_products WHERE product_id != '5292437' ORDER BY rn ASC, product_id ASC LIMIT ?`,
         [limit]
       );
       return res.json({ ok: true, count: rows.length, rows });
@@ -215,21 +216,36 @@ app.get("/db", async (req, res) => {
 
     if (op === "user_country_activity_top") {
       const user_id = Number(req.query.user_id || 0);
-      const limit = 100; // 최대 1000 row이므로 limit 100 고정
+      const limit = Math.min(Number(req.query.limit || 20), 100); // limit 파라미터 지원
       if (!user_id)
         return res.status(400).json({ ok: false, error: "user_id required" });
       
       // tmp_current_user 테이블에 user_id 설정
-      await pool.query("TRUNCATE TABLE tmp_current_user");
-      await pool.query("INSERT INTO tmp_current_user VALUES (?)", [user_id]);
+      // REPLACE INTO 사용하여 중복 방지
+      await pool.query("REPLACE INTO tmp_current_user VALUES (?)", [user_id]);
       
       // 뷰에서 user_id 조건 제거 (뷰가 이미 tmp_current_user를 참조)
-      // 제품 5292437 제외, v_country_activity_products_all 뷰 사용 (activity_tag 포함)
+      // 제품 5292437 제외
+      // DDL 변경: reco_rank -> rn, v_country_activity_top20_products 사용
       const [rows] = await pool.query(
-        `SELECT * FROM v_country_activity_products_all WHERE product_id != '5292437' ORDER BY reco_rank ASC, product_id ASC LIMIT ?`,
+        `SELECT * FROM v_country_activity_top20_products WHERE product_id != '5292437' ORDER BY rn ASC, product_id ASC LIMIT ?`,
         [limit]
       );
-      return res.json({ ok: true, count: rows.length, rows });
+      
+      // DDL 변경: activity_tag1, activity_tag2를 activity_tag로 매핑
+      const mappedRows = rows.map(row => {
+        const activityTagArray = [];
+        if (row.activity_tag1) activityTagArray.push(row.activity_tag1);
+        if (row.activity_tag2) activityTagArray.push(row.activity_tag2);
+        
+        return {
+          ...row,
+          activity_tag: activityTagArray.length > 0 ? activityTagArray[0] : null, // 첫 번째 태그를 activity_tag로 사용 (기존 호환성)
+          activity_tags: activityTagArray // 배열 형태로도 제공
+        };
+      });
+      
+      return res.json({ ok: true, count: mappedRows.length, rows: mappedRows });
     }
 
     if (op === "user_country_photo_top") {
@@ -239,13 +255,14 @@ app.get("/db", async (req, res) => {
         return res.status(400).json({ ok: false, error: "user_id required" });
       
       // tmp_current_user 테이블에 user_id 설정
-      await pool.query("TRUNCATE TABLE tmp_current_user");
-      await pool.query("INSERT INTO tmp_current_user VALUES (?)", [user_id]);
+      // REPLACE INTO 사용하여 중복 방지
+      await pool.query("REPLACE INTO tmp_current_user VALUES (?)", [user_id]);
       
       // 뷰에서 user_id 조건 제거 (뷰가 이미 tmp_current_user를 참조)
       // 제품 5292437 제외
+      // DDL 변경: reco_rank -> rn
       const [rows] = await pool.query(
-        `SELECT * FROM v_country_photo_top20_products WHERE product_id != '5292437' ORDER BY reco_rank ASC, product_id ASC LIMIT ?`,
+        `SELECT * FROM v_country_photo_top20_products WHERE product_id != '5292437' ORDER BY rn ASC, product_id ASC LIMIT ?`,
         [limit]
       );
       return res.json({ ok: true, count: rows.length, rows });
@@ -312,14 +329,10 @@ app.get("/db", async (req, res) => {
         // 새로운 방식: withUser가 true이고 userId가 있으면 tmp_current_user 설정
         if (withUser && userId) {
           // tmp_current_user 설정 후 뷰 조회 (user_id 조건 제거)
-          pushQuery(
-            "user_country_climate_top_user_setup",
-            "TRUNCATE TABLE tmp_current_user",
-            []
-          );
+          // REPLACE INTO 사용하여 중복 방지
           pushQuery(
             "user_country_climate_top_user_insert",
-            "INSERT INTO tmp_current_user VALUES (?)",
+            "REPLACE INTO tmp_current_user VALUES (?)",
             [userId]
           );
         }
@@ -332,7 +345,8 @@ app.get("/db", async (req, res) => {
           sql += " AND region_id = ?";
           params.push(regionId);
         }
-        sql += " ORDER BY reco_rank ASC, product_id ASC LIMIT 1";
+        // DDL 변경: reco_rank -> rn
+        sql += " ORDER BY rn ASC, product_id ASC LIMIT 1";
         pushQuery(
           withUser
             ? "user_country_climate_top_user"
@@ -346,14 +360,10 @@ app.get("/db", async (req, res) => {
         // 새로운 방식: withUser가 true이고 userId가 있으면 tmp_current_user 설정
         if (withUser && userId) {
           // tmp_current_user 설정 후 뷰 조회 (user_id 조건 제거)
-          pushQuery(
-            "user_country_activity_top_user_setup",
-            "TRUNCATE TABLE tmp_current_user",
-            []
-          );
+          // REPLACE INTO 사용하여 중복 방지
           pushQuery(
             "user_country_activity_top_user_insert",
-            "INSERT INTO tmp_current_user VALUES (?)",
+            "REPLACE INTO tmp_current_user VALUES (?)",
             [userId]
           );
         }
@@ -366,7 +376,8 @@ app.get("/db", async (req, res) => {
           sql += " AND region_id = ?";
           params.push(regionId);
         }
-        sql += " ORDER BY reco_rank ASC, product_id ASC LIMIT 1";
+        // DDL 변경: reco_rank -> rn
+        sql += " ORDER BY rn ASC, product_id ASC LIMIT 1";
         pushQuery(
           withUser
             ? "user_country_activity_top_user"
@@ -380,14 +391,10 @@ app.get("/db", async (req, res) => {
         // 새로운 방식: withUser가 true이고 userId가 있으면 tmp_current_user 설정
         if (withUser && userId) {
           // tmp_current_user 설정 후 뷰 조회 (user_id 조건 제거)
-          pushQuery(
-            "user_country_photo_top_user_setup",
-            "TRUNCATE TABLE tmp_current_user",
-            []
-          );
+          // REPLACE INTO 사용하여 중복 방지
           pushQuery(
             "user_country_photo_top_user_insert",
-            "INSERT INTO tmp_current_user VALUES (?)",
+            "REPLACE INTO tmp_current_user VALUES (?)",
             [userId]
           );
         }
@@ -400,7 +407,8 @@ app.get("/db", async (req, res) => {
           sql += " AND region_id = ?";
           params.push(regionId);
         }
-        sql += " ORDER BY reco_rank ASC, product_id ASC LIMIT 1";
+        // DDL 변경: reco_rank -> rn
+        sql += " ORDER BY rn ASC, product_id ASC LIMIT 1";
         pushQuery(
           withUser ? "user_country_photo_top_user" : "user_country_photo_top",
           sql,
@@ -464,8 +472,8 @@ app.get("/db", async (req, res) => {
 
       for (const q of queryList) {
         try {
-          // TRUNCATE/INSERT 같은 설정 쿼리는 실행만 하고 결과는 무시
-          if (q.name.includes("_setup") || q.name.includes("_insert")) {
+          // REPLACE INTO 같은 설정 쿼리는 실행만 하고 결과는 무시
+          if (q.name.includes("_insert") || q.name.includes("_setup")) {
             await pool.query(q.sql, q.params);
             continue; // 다음 쿼리로 진행
           }

@@ -484,16 +484,22 @@ async function loadSectionProducts(sectionId, userId, type, regionId = null) {
       __source: sourceLabel,
     }));
 
-    if (normalizedProducts.length > 0) {
+    // 활동 또는 기후 섹션인 경우 브랜드 중복 제거
+    let filteredProducts = normalizedProducts;
+    if (type === "activity" || type === "climate") {
+      filteredProducts = removeDuplicateBrands(normalizedProducts);
+    }
+
+    if (filteredProducts.length > 0) {
       // 처음에는 9개만 표시
-      renderProductsToGrid(productGrid, normalizedProducts, 9);
+      renderProductsToGrid(productGrid, filteredProducts, 9);
       console.log(
-        `[${type}] 성공: ${normalizedProducts.length}개 제품 로드 완료 (user_id: ${userId})`
+        `[${type}] 성공: ${filteredProducts.length}개 제품 로드 완료 (user_id: ${userId}, 원본: ${normalizedProducts.length}개)`
       );
       
       // 활동 섹션인 경우 태그별 제품 존재 여부 확인 후 버튼 업데이트
       if (type === "activity" && sectionId === "activity-section") {
-        updateActivityTagsBasedOnProducts(normalizedProducts);
+        updateActivityTagsBasedOnProducts(filteredProducts);
       }
     } else {
       console.warn(`[${type}] 경고: 제품이 없습니다 (user_id: ${userId})`, {
@@ -511,6 +517,26 @@ async function loadSectionProducts(sectionId, userId, type, regionId = null) {
   }
 }
 
+// 브랜드 중복 제거 함수 (각 브랜드당 하나씩만 선택)
+function removeDuplicateBrands(products) {
+  const seenBrands = new Set();
+  const uniqueProducts = [];
+
+  for (const product of products) {
+    const brand = (product.brand || "").trim();
+    
+    // 브랜드가 없거나 이미 본 브랜드인 경우 건너뛰기
+    if (!brand || seenBrands.has(brand)) {
+      continue;
+    }
+
+    seenBrands.add(brand);
+    uniqueProducts.push(product);
+  }
+
+  return uniqueProducts;
+}
+
 // 제품 그리드에 제품 렌더링
 function renderProductsToGrid(
   grid,
@@ -522,21 +548,37 @@ function renderProductsToGrid(
   // 기존 모든 제품 제거 (하드코딩된 것들 포함)
   grid.innerHTML = "";
 
+  // 활동 또는 기후 섹션인지 확인
+  let isActivityOrClimateSection = false;
+  if (grid && grid.closest) {
+    const section = grid.closest(".section");
+    if (section) {
+      const sectionId = section.id;
+      isActivityOrClimateSection = sectionId === "activity-section" || sectionId === "weather-section";
+    }
+  }
+
+  // 활동 또는 기후 섹션인 경우 브랜드 중복 제거
+  let filteredProducts = products;
+  if (isActivityOrClimateSection) {
+    filteredProducts = removeDuplicateBrands(products);
+  }
+
   // 제품 데이터를 그리드에 저장 (더보기 버튼에서 사용)
   // preserveOriginalData가 true이면 원본 데이터를 유지 (정렬 시 사용)
   if (!preserveOriginalData) {
-    grid.dataset.allProducts = JSON.stringify(products);
+    grid.dataset.allProducts = JSON.stringify(filteredProducts);
   }
 
   // API에서 받아온 제품들만 표시
-  products.slice(0, maxProducts).forEach((product) => {
+  filteredProducts.slice(0, maxProducts).forEach((product) => {
     const card = createProductCardFromAPI(product);
     grid.appendChild(card);
   });
 
   // 더보기 버튼 설정 (건너뛰지 않는 경우만)
   if (!skipButtonSetup) {
-    setupMoreButton(grid, products.length, maxProducts);
+    setupMoreButton(grid, filteredProducts.length, maxProducts);
   }
 }
 
@@ -635,9 +677,19 @@ function createProductCardFromAPI(product) {
       params.set("product_id", productId);
       if (source) params.set("source", source);
       if (regionId) params.set("region_id", regionId);
-      window.location.href = `../Detail/navigation.html?${params.toString()}`;
-    } else {
-      window.location.href = "../Detail/navigation.html";
+      let url = `../Detail/navigation.html?${params.toString()}`;
+      // utm_source 파라미터 유지
+      if (typeof window.preserveUTMParams === 'function') {
+        url = window.preserveUTMParams(url);
+      }
+      window.location.href = url;
+      } else {
+      let url = "../Detail/navigation.html";
+      // utm_source 파라미터 유지
+      if (typeof window.preserveUTMParams === 'function') {
+        url = window.preserveUTMParams(url);
+      }
+      window.location.href = url;
     }
   });
 
@@ -745,7 +797,12 @@ const logoutBtn = document.querySelector(".logout-btn");
 // FITPL 버튼 클릭 이벤트
 if (logoutBtn) {
   logoutBtn.addEventListener("click", function () {
-    window.location.href = "../fitpl-website/index.html";
+    let url = "../fitpl-website/index.html";
+    // utm_source 파라미터 유지
+    if (typeof window.preserveUTMParams === 'function') {
+      url = window.preserveUTMParams(url);
+    }
+    window.location.href = url;
   });
 }
 
@@ -776,6 +833,7 @@ weatherTags.forEach((tag) => {
 });
 
 // 활동 태그 한글 텍스트를 API activity_tag로 매핑
+// DDL 변경: 도시관광, 문화/예술만 한글 값으로 저장됨
 function mapActivityTagToAPI(한글태그) {
   const mapping = {
     "휴양": [
@@ -789,10 +847,7 @@ function mapActivityTagToAPI(한글태그) {
     "레저": [
       "yacht_cruise", "observation_deck",  // 기본 레저
     ],
-    "도시관광": [
-      "city_tour", "market_night", "cafe_hopping", "outlet_mall",  // 기본 도시관광
-      "art_museum", "museum", "cathedral_church", "temple_shrine",  // 문화/예술 통합
-    ],
+    "도시관광": ["도시관광", "문화/예술"],  // 한글 값 직접 매핑
   };
   return mapping[한글태그] || null;
 }
@@ -807,6 +862,7 @@ function updateActivityTagsBasedOnProducts(products) {
   if (!activityTagsContainer) return;
   
   // 태그 정의 (4개 버튼만 사용)
+  // DDL 변경: 도시관광, 문화/예술만 한글 값으로 저장됨
   const tagDefinitions = {
     "휴양": [
       "beach", "hot_spring",           // 기본 휴양 태그
@@ -819,17 +875,28 @@ function updateActivityTagsBasedOnProducts(products) {
     "레저": [
       "yacht_cruise", "observation_deck",  // 기본 레저
     ],
-    "도시관광": [
-      "city_tour", "market_night", "cafe_hopping", "outlet_mall",  // 기본 도시관광
-      "art_museum", "museum", "cathedral_church", "temple_shrine",  // 문화/예술 통합
-    ],
+    "도시관광": ["도시관광", "문화/예술"],  // 한글 값 직접 매핑
   };
   
-  // 제품들의 activity_tag 추출 (소문자로 정규화)
+  // 제품들의 activity_tag 추출 (영문은 소문자, 한글은 그대로)
   const productTags = new Set();
   products.forEach(p => {
     if (p?.activity_tag) {
-      productTags.add(String(p.activity_tag).toLowerCase().trim());
+      const tag = String(p.activity_tag).trim();
+      // 한글 태그인지 확인 (도시관광, 문화/예술 등)
+      const isKoreanTag = /[가-힣]/.test(tag);
+      productTags.add(isKoreanTag ? tag : tag.toLowerCase());
+    }
+    // activity_tag1, activity_tag2도 확인 (DDL 변경)
+    if (p?.activity_tag1) {
+      const tag = String(p.activity_tag1).trim();
+      const isKoreanTag = /[가-힣]/.test(tag);
+      productTags.add(isKoreanTag ? tag : tag.toLowerCase());
+    }
+    if (p?.activity_tag2) {
+      const tag = String(p.activity_tag2).trim();
+      const isKoreanTag = /[가-힣]/.test(tag);
+      productTags.add(isKoreanTag ? tag : tag.toLowerCase());
     }
   });
   
@@ -854,7 +921,12 @@ function updateActivityTagsBasedOnProducts(products) {
   
   allTags.forEach((tagText) => {
     const apiTags = tagDefinitions[tagText];
-    const normalizedApiTags = apiTags.map(tag => String(tag).toLowerCase().trim());
+    // 영문 태그는 소문자, 한글 태그는 그대로
+    const normalizedApiTags = apiTags.map(tag => {
+      const trimmed = String(tag).trim();
+      const isKoreanTag = /[가-힣]/.test(trimmed);
+      return isKoreanTag ? trimmed : trimmed.toLowerCase();
+    });
     const hasMatchingProduct = normalizedApiTags.some(apiTag => productTags.has(apiTag));
     
     if (hasMatchingProduct) {
@@ -936,11 +1008,26 @@ function setupActivityTagListeners() {
         // activity_tag 배열로 정렬
         const sortedProducts = sortProductsByActivityTag(allProducts, activityTags);
         
-        // 일치하는 제품 수 확인
-        const normalizedTags = activityTags.map(tag => String(tag).toLowerCase().trim());
+        // 일치하는 제품 수 확인 (영문은 소문자, 한글은 그대로)
+        const normalizedTags = activityTags.map(tag => {
+          const trimmed = String(tag).trim();
+          const isKoreanTag = /[가-힣]/.test(trimmed);
+          return isKoreanTag ? trimmed : trimmed.toLowerCase();
+        });
         
-        // 디버깅: 실제 제품들의 activity_tag 값 확인
-        const allProductTags = allProducts.map(p => String(p?.activity_tag || "").toLowerCase().trim()).filter(t => t);
+        // 디버깅: 실제 제품들의 activity_tag 값 확인 (activity_tag1, activity_tag2도 포함)
+        const allProductTags = [];
+        allProducts.forEach(p => {
+          const addTag = (tag) => {
+            if (!tag) return;
+            const trimmed = String(tag).trim();
+            const isKoreanTag = /[가-힣]/.test(trimmed);
+            allProductTags.push(isKoreanTag ? trimmed : trimmed.toLowerCase());
+          };
+          if (p?.activity_tag) addTag(p.activity_tag);
+          if (p?.activity_tag1) addTag(p.activity_tag1);
+          if (p?.activity_tag2) addTag(p.activity_tag2);
+        });
         const uniqueProductTags = [...new Set(allProductTags)];
         console.log(`[활동 태그 디버깅] ${tagText} 클릭 시:`);
         console.log(`  - 검색할 태그들:`, normalizedTags);
@@ -951,8 +1038,24 @@ function setupActivityTagListeners() {
           console.log(`    - "${searchTag}": ${matches.length > 0 ? `✅ 매칭됨 (${matches.join(', ')})` : '❌ 매칭 안 됨'}`);
         });
         
+        // DDL 변경: 영문은 소문자, 한글은 그대로, activity_tag1, activity_tag2도 확인
+        const getProductActivityTagForMatch = (p) => {
+          let tag = "";
+          if (p?.activity_tag) {
+            tag = String(p.activity_tag).trim();
+          } else if (p?.activity_tag1) {
+            tag = String(p.activity_tag1).trim();
+          } else if (p?.activity_tag2) {
+            tag = String(p.activity_tag2).trim();
+          }
+          if (!tag) return "";
+          // 한글 태그인지 확인
+          const isKoreanTag = /[가-힣]/.test(tag);
+          return isKoreanTag ? tag : tag.toLowerCase();
+        };
+        
         const matchingProducts = sortedProducts.filter(p => {
-          const productTag = String(p?.activity_tag || "").toLowerCase().trim();
+          const productTag = getProductActivityTagForMatch(p);
           return normalizedTags.includes(productTag);
         });
         console.log(`  - ${tagText} 태그와 일치하는 제품 수: ${matchingProducts.length}`);
@@ -960,7 +1063,7 @@ function setupActivityTagListeners() {
         // 매칭되지 않은 경우 부분 매칭도 시도 (디버깅용)
         if (matchingProducts.length === 0) {
           const partialMatches = sortedProducts.filter(p => {
-            const productTag = String(p?.activity_tag || "").toLowerCase().trim();
+            const productTag = getProductActivityTagForMatch(p);
             return normalizedTags.some(searchTag => 
               productTag.includes(searchTag) || searchTag.includes(productTag)
             );
@@ -1009,8 +1112,12 @@ function sortProductsByActivityTag(products, activityTags) {
     return products;
   }
 
-  // activity_tag 배열을 소문자로 정규화 (전역 변수로 만들어서 디버깅에서 사용 가능하게)
-  window.normalizedTags = activityTags.map(tag => String(tag).toLowerCase().trim());
+  // activity_tag 배열 정규화 (영문은 소문자, 한글은 그대로)
+  window.normalizedTags = activityTags.map(tag => {
+    const trimmed = String(tag).trim();
+    const isKoreanTag = /[가-힣]/.test(trimmed);
+    return isKoreanTag ? trimmed : trimmed.toLowerCase();
+  });
   const normalizedTags = window.normalizedTags;
   
   // 신발 카테고리 확인 함수
@@ -1020,9 +1127,26 @@ function sortProductsByActivityTag(products, activityTags) {
     return mainCategory === "shoes" || subCategory.includes("shoes") || subCategory.includes("신발");
   };
   
+  // 제품의 activity_tag 가져오기 (activity_tag1, activity_tag2도 확인)
+  // 영문은 소문자로, 한글은 그대로
+  const getProductActivityTag = (product) => {
+    let tag = "";
+    if (product?.activity_tag) {
+      tag = String(product.activity_tag).trim();
+    } else if (product?.activity_tag1) {
+      tag = String(product.activity_tag1).trim();
+    } else if (product?.activity_tag2) {
+      tag = String(product.activity_tag2).trim();
+    }
+    if (!tag) return "";
+    // 한글 태그인지 확인
+    const isKoreanTag = /[가-힣]/.test(tag);
+    return isKoreanTag ? tag : tag.toLowerCase();
+  };
+  
   return [...products].sort((a, b) => {
-    const aTag = String(a?.activity_tag || "").toLowerCase().trim();
-    const bTag = String(b?.activity_tag || "").toLowerCase().trim();
+    const aTag = getProductActivityTag(a);
+    const bTag = getProductActivityTag(b);
     
     // 배열 내의 태그와 일치하는지 확인
     const aMatch = normalizedTags.includes(aTag);
@@ -1087,15 +1211,22 @@ activityTags.forEach((tag) => {
       
       console.log(`[활동 태그] ${tagText} 클릭, activity_tags:`, activityTags);
       
-      // 디버깅: 실제 제품들의 activity_tag 값 확인
+      // 디버깅: 실제 제품들의 activity_tag 값 확인 (activity_tag1, activity_tag2도 포함)
       const activityTagCounts = {};
       const activityTagValues = [];
       allProducts.forEach(p => {
-        const tag = String(p?.activity_tag || 'null').toLowerCase();
-        activityTagCounts[tag] = (activityTagCounts[tag] || 0) + 1;
-        if (p?.activity_tag) {
-          activityTagValues.push(String(p.activity_tag).toLowerCase());
-        }
+        // activity_tag, activity_tag1, activity_tag2 모두 확인
+        const addTag = (tag) => {
+          if (!tag) return;
+          const trimmed = String(tag).trim();
+          const isKoreanTag = /[가-힣]/.test(trimmed);
+          const normalized = isKoreanTag ? trimmed : trimmed.toLowerCase();
+          activityTagCounts[normalized] = (activityTagCounts[normalized] || 0) + 1;
+          activityTagValues.push(normalized);
+        };
+        if (p?.activity_tag) addTag(p.activity_tag);
+        if (p?.activity_tag1) addTag(p.activity_tag1);
+        if (p?.activity_tag2) addTag(p.activity_tag2);
       });
       console.log(`[활동 태그 디버깅] ${tagText} 클릭 시:`);
       console.log(`  - 전체 제품 수: ${allProducts.length}`);
@@ -1107,10 +1238,31 @@ activityTags.forEach((tag) => {
       // activity_tag 배열로 정렬
       const sortedProducts = sortProductsByActivityTag(allProducts, activityTags);
       
-      // 일치하는 제품 수 확인
-      const normalizedTags = window.normalizedTags || activityTags.map(tag => String(tag).toLowerCase().trim());
+      // 일치하는 제품 수 확인 (영문은 소문자, 한글은 그대로)
+      const normalizedTags = window.normalizedTags || activityTags.map(tag => {
+        const trimmed = String(tag).trim();
+        const isKoreanTag = /[가-힣]/.test(trimmed);
+        return isKoreanTag ? trimmed : trimmed.toLowerCase();
+      });
+      
+      // 제품의 activity_tag 가져오기 (activity_tag1, activity_tag2도 확인)
+      const getProductActivityTagForMatch = (p) => {
+        let tag = "";
+        if (p?.activity_tag) {
+          tag = String(p.activity_tag).trim();
+        } else if (p?.activity_tag1) {
+          tag = String(p.activity_tag1).trim();
+        } else if (p?.activity_tag2) {
+          tag = String(p.activity_tag2).trim();
+        }
+        if (!tag) return "";
+        // 한글 태그인지 확인
+        const isKoreanTag = /[가-힣]/.test(tag);
+        return isKoreanTag ? tag : tag.toLowerCase();
+      };
+      
       const matchingProducts = sortedProducts.filter(p => {
-        const productTag = String(p?.activity_tag || "").toLowerCase().trim();
+        const productTag = getProductActivityTagForMatch(p);
         return normalizedTags.includes(productTag);
       });
       console.log(`  - ${tagText} 태그와 일치하는 제품 수: ${matchingProducts.length}`);
@@ -1289,7 +1441,12 @@ function createProductCard(product, sectionType) {
   if (sectionType !== "snap") {
     card.addEventListener("click", (e) => {
       if (e.target.closest(".like-btn")) return;
-      window.location.href = "../Detail/navigation.html";
+      let url = "../Detail/navigation.html";
+      // utm_source 파라미터 유지
+      if (typeof window.preserveUTMParams === 'function') {
+        url = window.preserveUTMParams(url);
+      }
+      window.location.href = url;
     });
   }
 
@@ -1405,7 +1562,12 @@ productCards.forEach((card) => {
   if (!isSnapCard) {
     card.addEventListener("click", (e) => {
       if (e.target.closest(".like-btn")) return;
-      window.location.href = "../Detail/navigation.html";
+      let url = "../Detail/navigation.html";
+      // utm_source 파라미터 유지
+      if (typeof window.preserveUTMParams === 'function') {
+        url = window.preserveUTMParams(url);
+      }
+      window.location.href = url;
     });
   }
 });

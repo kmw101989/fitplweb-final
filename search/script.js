@@ -305,7 +305,12 @@ class FigmaSearchPageController {
   // Detailpage로 이동
   navigateToDetailPage() {
     // Detailpage로 이동
-    window.location.href = "../Detailpage/index.html";
+    let url = "../Detailpage/index.html";
+    // utm_source 파라미터 유지
+    if (typeof window.preserveUTMParams === "function") {
+      url = window.preserveUTMParams(url);
+    }
+    window.location.href = url;
   }
 
   // 국가와 지역을 지정하여 Detailpage로 이동
@@ -315,18 +320,34 @@ class FigmaSearchPageController {
     if (regionId) {
       params.set("region_id", regionId);
     }
-    window.location.href = `../Detailpage/index.html?${params.toString()}`;
+    params.set("source", "search"); // 검색창에서 이동
+    let url = `../Detailpage/index.html?${params.toString()}`;
+    // utm_source 파라미터 유지
+    if (typeof window.preserveUTMParams === "function") {
+      url = window.preserveUTMParams(url);
+    }
+    window.location.href = url;
   }
 
   // Nation1-1로 이동
   navigateToNation1_1() {
-    window.location.href = "../Nation1-1/index.html";
+    let url = "../Nation1-1/index.html";
+    // utm_source 파라미터 유지
+    if (typeof window.preserveUTMParams === "function") {
+      url = window.preserveUTMParams(url);
+    }
+    window.location.href = url;
   }
 
   // Fitpl Website로 이동
   navigateToFitplWebsite() {
     // Fitpl Website로 이동
-    window.location.href = "../fitpl-website/index.html";
+    let url = "../fitpl-website/index.html";
+    // utm_source 파라미터 유지
+    if (typeof window.preserveUTMParams === "function") {
+      url = window.preserveUTMParams(url);
+    }
+    window.location.href = url;
   }
 
   // 태그 선택 (목록에 스타일 변경 + 검색창에 표시)

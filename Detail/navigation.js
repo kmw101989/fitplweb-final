@@ -229,7 +229,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
       // FITPL 링크인 경우 fitpl-website로 이동
       if (this.textContent.trim() === "FITPL") {
-        window.location.href = "../fitpl-website/index.html";
+        let url = "../fitpl-website/index.html";
+        // utm_source 파라미터 유지
+        if (typeof window.preserveUTMParams === 'function') {
+          url = window.preserveUTMParams(url);
+        }
+        window.location.href = url;
       } else {
         alert(`${this.textContent} 페이지로 이동합니다.`);
       }
@@ -255,7 +260,12 @@ document.addEventListener("DOMContentLoaded", function () {
     cartLink.addEventListener("click", function (e) {
       e.preventDefault();
       console.log("네비게이션 장바구니 링크 클릭 - cart 페이지로 이동");
-      window.location.href = "../cart/index.html";
+      let url = "../cart/index.html";
+      // utm_source 파라미터 유지
+      if (typeof window.preserveUTMParams === 'function') {
+        url = window.preserveUTMParams(url);
+      }
+      window.location.href = url;
     });
   }
 
@@ -924,7 +934,12 @@ document.addEventListener("DOMContentLoaded", function () {
     cartButton.addEventListener("click", function (e) {
       e.preventDefault();
       console.log("장바구니 버튼 클릭 - cart 페이지로 이동");
-      window.location.href = "../cart/index.html";
+      let url = "../cart/index.html";
+      // utm_source 파라미터 유지
+      if (typeof window.preserveUTMParams === 'function') {
+        url = window.preserveUTMParams(url);
+      }
+      window.location.href = url;
     });
   } else {
     console.log("cart-button 요소를 찾을 수 없습니다!");
@@ -939,7 +954,12 @@ document.addEventListener("DOMContentLoaded", function () {
       link.addEventListener("click", function (e) {
         e.preventDefault();
         console.log("네비게이션 장바구니 링크 클릭 - cart 페이지로 이동");
-        window.location.href = "../cart/index.html";
+        let url = "../cart/index.html";
+      // utm_source 파라미터 유지
+      if (typeof window.preserveUTMParams === 'function') {
+        url = window.preserveUTMParams(url);
+      }
+      window.location.href = url;
       });
     }
   });

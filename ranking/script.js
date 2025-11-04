@@ -399,27 +399,157 @@ likeBtns.forEach((btn) => {
   });
 });
 
-// 검색 기능
-function performSearch() {
-  const searchTerm = searchInput.value.trim();
-  if (searchTerm) {
-    console.log("검색어:", searchTerm);
-    // 실제 검색 로직 구현
-    searchProducts(searchTerm);
+// 검색 섹션 클릭 시 검색 페이지로 이동
+(function setupSearchSectionRedirect() {
+  console.log("[검색 리디렉션] 초기화 시작...");
+
+  function redirectToSearch() {
+    console.log("[검색 리디렉션] 🔵🔵🔵 리디렉션 실행!");
+    window.location.href = "../search/index.html";
   }
-}
 
-if (searchBtn) {
-  searchBtn.addEventListener("click", performSearch);
-}
-
-if (searchInput) {
-  searchInput.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") {
-      performSearch();
+  function initRedirect() {
+    const searchSection = document.querySelector(".search-section");
+    if (!searchSection) {
+      console.log(
+        "[검색 리디렉션] search-section 요소를 찾을 수 없습니다. 재시도 중..."
+      );
+      setTimeout(initRedirect, 100);
+      return;
     }
-  });
-}
+
+    console.log("[검색 리디렉션] ✅ search-section 요소 발견!");
+    searchSection.style.cursor = "pointer";
+
+    // 검색 입력창과 버튼 찾기
+    const searchInput = searchSection.querySelector(".search-input");
+    const searchBtnInSection = searchSection.querySelector(".search-btn");
+
+    console.log("[검색 리디렉션] 요소 확인:", {
+      searchInput: !!searchInput,
+      searchBtnInSection: !!searchBtnInSection,
+      searchInputId: searchInput?.id,
+      searchBtnClass: searchBtnInSection?.className,
+    });
+
+    // 검색 입력창 처리
+    if (searchInput) {
+      // 기존 이벤트 리스너 제거를 위해 요소 복제
+      const newInput = searchInput.cloneNode(true);
+      if (searchInput.parentNode) {
+        searchInput.parentNode.replaceChild(newInput, searchInput);
+      }
+
+      const input = searchSection.querySelector(".search-input");
+      if (input) {
+        input.style.cursor = "pointer";
+        input.readOnly = true; // 입력 불가능하게 설정
+        input.setAttribute("tabindex", "0");
+
+        // 여러 이벤트 타입으로 처리
+        const handlers = {
+          click: function (e) {
+            console.log("[검색 리디렉션] 🔵 입력창 클릭!");
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            redirectToSearch();
+            return false;
+          },
+          mousedown: function (e) {
+            console.log("[검색 리디렉션] 🔵 입력창 마우스다운!");
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            redirectToSearch();
+            return false;
+          },
+          focus: function (e) {
+            console.log("[검색 리디렉션] 🔵 입력창 포커스!");
+            e.preventDefault();
+            e.stopPropagation();
+            redirectToSearch();
+            return false;
+          },
+          keydown: function (e) {
+            if (e.key === "Enter" || e.keyCode === 13) {
+              console.log("[검색 리디렉션] 🔵 입력창 Enter!");
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+              redirectToSearch();
+              return false;
+            }
+          },
+        };
+
+        // 모든 이벤트를 capture phase에서 등록
+        Object.entries(handlers).forEach(([event, handler]) => {
+          input.addEventListener(event, handler, true);
+        });
+      }
+    }
+
+    // 검색 버튼 처리
+    if (searchBtnInSection) {
+      // 기존 이벤트 리스너 제거를 위해 요소 복제
+      const newBtn = searchBtnInSection.cloneNode(true);
+      if (searchBtnInSection.parentNode) {
+        searchBtnInSection.parentNode.replaceChild(newBtn, searchBtnInSection);
+      }
+
+      const btn = searchSection.querySelector(".search-btn");
+      if (btn) {
+        const handlers = {
+          click: function (e) {
+            console.log("[검색 리디렉션] 🔵 버튼 클릭!");
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            redirectToSearch();
+            return false;
+          },
+          mousedown: function (e) {
+            console.log("[검색 리디렉션] 🔵 버튼 마우스다운!");
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            redirectToSearch();
+            return false;
+          },
+        };
+
+        // 모든 이벤트를 capture phase에서 등록
+        Object.entries(handlers).forEach(([event, handler]) => {
+          btn.addEventListener(event, handler, true);
+        });
+      }
+    }
+
+    // 검색 섹션 전체 클릭 처리 (최후의 수단)
+    const sectionHandler = function (e) {
+      const clickedInput = e.target.closest(".search-input");
+      const clickedBtn = e.target.closest(".search-btn");
+
+      if (!clickedInput && !clickedBtn) {
+        console.log("[검색 리디렉션] 🔵 섹션 클릭!");
+        redirectToSearch();
+      }
+    };
+
+    searchSection.addEventListener("click", sectionHandler, true);
+
+    console.log("[검색 리디렉션] ✅ 설정 완료!");
+  }
+
+  // 즉시 실행 또는 DOM 로드 대기
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initRedirect);
+  } else {
+    // DOM이 이미 로드된 경우 약간의 지연을 두고 실행
+    setTimeout(initRedirect, 10);
+  }
+})();
 
 // 상품 필터링 함수들
 function filterProductsByCountry(country) {

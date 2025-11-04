@@ -983,6 +983,7 @@ body {
   width: 100%;
   max-width: 281.6px;
   height: auto;
+  cursor: pointer;
 }
 
 .new-section .product-card {

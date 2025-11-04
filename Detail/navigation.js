@@ -140,9 +140,29 @@ function createRelatedCardElement(product) {
   const imageWrapper = document.createElement("div");
   imageWrapper.className = "related-image";
   const img = document.createElement("img");
-  const imageUrl = product?.img_url || product?.image_url || PDP_FALLBACK_IMAGE;
+  
+  // 이미지 URL 유효성 검사 및 정규화
+  let imageUrl = PDP_FALLBACK_IMAGE;
+  if (product?.images && Array.isArray(product.images) && product.images.length > 0) {
+    const url = product.images[0];
+    if (url && typeof url === "string" && url.trim() && url.trim() !== "null" && url.trim() !== "undefined") {
+      imageUrl = url.trim();
+    }
+  } else if (product?.img_url) {
+    const url = product.img_url;
+    if (url && typeof url === "string" && url.trim() && url.trim() !== "null" && url.trim() !== "undefined") {
+      imageUrl = url.trim();
+    }
+  } else if (product?.image_url) {
+    const url = product.image_url;
+    if (url && typeof url === "string" && url.trim() && url.trim() !== "null" && url.trim() !== "undefined") {
+      imageUrl = url.trim();
+    }
+  }
+  
   img.src = imageUrl;
   img.alt = product?.product_name || product?.brand || "추천 상품";
+  img.onerror = function() { this.src = PDP_FALLBACK_IMAGE; };
   imageWrapper.appendChild(img);
 
   const info = document.createElement("div");
@@ -321,11 +341,24 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
+  // 이미지 URL 유효성 검사 함수
+  function validateImageUrl(url) {
+    if (!url || typeof url !== "string") return null;
+    const trimmed = url.trim();
+    if (!trimmed || trimmed === "" || trimmed === "null" || trimmed === "undefined") {
+      return null;
+    }
+    return trimmed;
+  }
+
   function setMainImage(url, index = 0, total = 0, productName = "") {
+    const validUrl = validateImageUrl(url);
+    const imageUrl = validUrl || PDP_FALLBACK_IMAGE;
+    
     if (mainImage) {
-      const imageUrl = url || PDP_FALLBACK_IMAGE;
       mainImage.src = imageUrl;
       mainImage.alt = productName ? `${productName} 이미지` : "상품 이미지";
+      mainImage.onerror = function() { this.src = PDP_FALLBACK_IMAGE; };
       // 이미지가 로드되면 표시
       if (imageUrl) {
         mainImage.style.display = "block";
@@ -337,31 +370,36 @@ document.addEventListener("DOMContentLoaded", function () {
     // 히어로 이미지도 업데이트 (사이즈 테이블 밑)
     const heroImageBelowSize = document.getElementById("hero-image-below-size");
     if (heroImageBelowSize) {
-      const imageUrl = url || PDP_FALLBACK_IMAGE;
       heroImageBelowSize.src = imageUrl;
       heroImageBelowSize.alt = productName ? `${productName} 상세 이미지` : "상품 상세 이미지";
+      heroImageBelowSize.onerror = function() { this.src = PDP_FALLBACK_IMAGE; };
       heroImageBelowSize.style.display = imageUrl ? "block" : "none";
     }
   }
 
   function renderThumbnails(imageList = [], productName = "") {
     if (!thumbnailsContainer) return;
-    const uniqueUrls = Array.from(
-      new Set(imageList.filter((url) => typeof url === "string" && url))
-    );
+    
+    // 이미지 URL 유효성 검사 및 필터링
+    const validUrls = imageList
+      .map(url => validateImageUrl(url))
+      .filter(url => url !== null);
+    
+    const uniqueUrls = Array.from(new Set(validUrls));
 
-    if (
-      currentProduct?.img_url &&
-      !uniqueUrls.includes(currentProduct.img_url)
-    ) {
-      uniqueUrls.unshift(currentProduct.img_url);
+    // currentProduct의 img_url도 추가 (유효한 경우만)
+    if (currentProduct?.img_url) {
+      const validatedUrl = validateImageUrl(currentProduct.img_url);
+      if (validatedUrl && !uniqueUrls.includes(validatedUrl)) {
+        uniqueUrls.unshift(validatedUrl);
+      }
     }
 
     if (uniqueUrls.length <= 1) {
       thumbnailsContainer.innerHTML = "";
       thumbnailsContainer.hidden = true;
       setMainImage(
-        uniqueUrls[0] || currentProduct?.img_url || PDP_FALLBACK_IMAGE,
+        uniqueUrls[0] || PDP_FALLBACK_IMAGE,
         0,
         uniqueUrls.length,
         productName

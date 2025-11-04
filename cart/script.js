@@ -82,9 +82,27 @@ function storeCartItem(payload) {
 function getUserFromStorage() {
   try {
     const stored = localStorage.getItem("fitpl_user");
-    return stored ? JSON.parse(stored) : null;
+    if (!stored) return null;
+    
+    const userData = JSON.parse(stored);
+    
+    // 만료 시간 체크
+    if (userData.expires_at) {
+      const expiresAt = new Date(userData.expires_at);
+      const now = new Date();
+      
+      if (now > expiresAt) {
+        // 만료되었으면 삭제하고 null 반환
+        console.log("[Cart] 로컬 스토리지 데이터가 만료되었습니다. 삭제합니다.");
+        localStorage.removeItem("fitpl_user");
+        return null;
+      }
+    }
+    
+    return userData;
   } catch (error) {
     console.warn("[Cart] user storage parse failed:", error);
+    localStorage.removeItem("fitpl_user"); // 오류 시 삭제
     return null;
   }
 }
@@ -990,18 +1008,94 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
+  // 국가-도시 매핑
+  const countryToCities = {
+    일본: ["도쿄", "오사카"],
+    중국: ["상하이", "광저우"],
+    대만: ["타이베이", "가오슝"],
+    태국: ["방콕", "치앙마이"],
+    베트남: ["하노이", "다낭"],
+    필리핀: ["마닐라", "세부"],
+    홍콩: ["홍콩"],
+    마카오: ["마카오"],
+    인도네시아: ["자카르타", "발리"],
+    미국: ["괌", "하와이"],
+    싱가포르: ["싱가포르"],
+    호주: ["시드니"],
+  };
+
+  // 국가 선택 시 해당 국가의 도시만 표시
+  function filterCitiesByCountry(countryName) {
+    if (!cityList) return;
+    
+    const cities = countryToCities[countryName] || [];
+    const cityItems = cityList.querySelectorAll("li.option-item");
+    
+    cityItems.forEach((item) => {
+      const input = item.querySelector("input");
+      const cityName = input?.value;
+      
+      if (cityName) {
+        if (cities.includes(cityName)) {
+          item.style.display = "";
+        } else {
+          item.style.display = "none";
+          // 숨겨진 도시의 선택 해제
+          if (input && input.checked) {
+            input.checked = false;
+            renderChips(chipsCity, [], null);
+          }
+        }
+      }
+    });
+  }
+  
+  // 초기 로드 시 모든 도시 숨기기 (국가 선택 전까지)
+  function hideAllCities() {
+    if (!cityList) return;
+    const cityItems = cityList.querySelectorAll("li.option-item");
+    cityItems.forEach((item) => {
+      item.style.display = "none";
+    });
+  }
+  
+  // 초기 로드 시 도시 숨기기
+  hideAllCities();
+
   // Country
   if (countryList) {
     countryList.addEventListener("change", () => {
       if (countryError) countryError.textContent = "";
       const selected = document.querySelector('input[name="country"]:checked');
+      
+      // 국가 선택 시 도시 필터링
+      if (selected) {
+        filterCitiesByCountry(selected.value);
+        // 도시 필드 열기
+        const cityField = cityList?.closest(".form-field");
+        if (cityField) {
+          cityField.classList.remove("collapsed");
+        }
+      } else {
+        // 국가 선택 해제 시 모든 도시 숨기기
+        hideAllCities();
+      }
+      
       renderChips(chipsCountry, selected ? [selected.value] : [], (value) => {
         const input = countryList.querySelector(`input[value="${value}"]`);
         if (input) input.checked = false;
         renderChips(chipsCountry, [], null);
+        // 국가 선택 해제 시 모든 도시 숨기기
+        hideAllCities();
       });
       collapseField(countryList.closest('.form-field'));
     });
+    
+    // 이미 선택된 국가가 있는 경우 (예: 페이지 리로드 후)
+    const initialSelected = document.querySelector('input[name="country"]:checked');
+    if (initialSelected) {
+      filterCitiesByCountry(initialSelected.value);
+    }
   }
 
   // City
@@ -1061,7 +1155,19 @@ document.addEventListener("DOMContentLoaded", function () {
       e.preventDefault();
       const selectedCountry = document.querySelector('input[name="country"]:checked');
       if (!selectedCountry) {
-        if (countryError) countryError.textContent = "여행지역을 1개 선택해 주세요."; return;
+        if (countryError) countryError.textContent = "국가를 1개 선택해 주세요."; return;
+      }
+      
+      // 도시 선택 확인 (필수)
+      const selectedCity = document.querySelector('input[name="city"]:checked');
+      if (!selectedCity) {
+        alert("도시를 선택해 주세요.");
+        const cityField = cityList?.closest(".form-field");
+        if (cityField) {
+          cityField.classList.remove("collapsed");
+          cityField.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        return;
       }
       const selectedPrefCats = document.querySelectorAll('input[name="prefCat"]:checked');
       if (!selectedPrefCats.length) {

@@ -226,98 +226,152 @@ function navigateToDetailPage(productId, source, regionId) {
 // 세일 제품 로드 (API)
 async function loadSaleProducts() {
   const base = "/.netlify/functions/db";
-  const url = `${base}?op=product_sale&limit=60&min_discount=10`;
+  // 랭킹과 동일한 방식으로 호출하되 할인율 필터와 discount_rate_desc 정렬 사용
+  const url = `${base}?op=product_sale&limit=60&min_discount=10&order=discount_rate_desc`;
 
   try {
-    console.log("[세일] API 호출:", url);
+    console.log("[세일] API 호출 시작:", url);
+    
     const response = await fetch(url);
+    
+    console.log("[세일] Response status:", response.status, response.statusText);
 
     if (!response.ok) {
-      const errorText = await response.text().catch(() => "");
+      let errorText = "";
+      try {
+        errorText = await response.text();
+      } catch (e) {
+        errorText = `응답을 읽을 수 없음: ${e.message}`;
+      }
       console.error(`[세일] HTTP 에러 ${response.status}:`, errorText);
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
+      
+      // 에러 응답이 JSON일 수도 있음
+      let errorData = null;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        // JSON이 아니면 그냥 텍스트로 처리
+      }
+      
+      throw new Error(
+        `HTTP ${response.status}: ${errorData?.error || errorText || response.statusText}`
+      );
     }
 
     const data = await response.json();
-    console.log("[세일] 응답:", {
+    console.log("[세일] 응답 데이터:", {
       ok: data?.ok,
-      rows: data?.rows?.length || 0,
+      count: data?.count,
+      rowsLength: data?.rows?.length || 0,
       error: data?.error,
+      firstProduct: data?.rows?.[0] || null,
     });
 
-    const products = data?.rows || data?.data?.rows || [];
+    if (!data?.ok) {
+      throw new Error(data?.error || "API 응답이 성공하지 않았습니다");
+    }
+
+    const products = data?.rows || [];
+    
+    if (!Array.isArray(products)) {
+      throw new Error(`예상하지 못한 응답 형식: products는 배열이어야 합니다 (받은 타입: ${typeof products})`);
+    }
 
     if (products.length > 0) {
       renderProductsFromAPI(products);
-      console.log(`[세일] ${products.length}개 제품 렌더링 완료`);
+      console.log(`[세일] ✅ ${products.length}개 제품 렌더링 완료`);
     } else {
-      console.warn("제품 데이터가 없어 기본 렌더링 사용");
+      console.warn("[세일] ⚠️ 제품 데이터가 없어 기본 렌더링 사용");
       renderProducts();
     }
   } catch (error) {
-    console.error("세일 제품 로드 실패:", error);
+    console.error("[세일] ❌ 세일 제품 로드 실패:", error);
+    console.error("[세일] 에러 상세:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+    
     // 실패 시 기본 렌더링 사용
+    console.log("[세일] 기본 제품 렌더링으로 대체합니다...");
     renderProducts();
   }
+}
+
+// 제품 카드 HTML 생성 함수 (메인페이지와 동일한 형식)
+function createProductCard(product) {
+  const price = Number(product.price || 0).toLocaleString();
+  const name = (product.product_name || "").replace(/\s+/g, " ").trim();
+  const brand = product.brand || "";
+  const imgUrl =
+    product.img_url ||
+    "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=260&h=312&fit=crop";
+  const discountRate = product.discount_rate
+    ? Math.round(product.discount_rate)
+    : null;
+  const dataSource = product.__source || "product_sale";
+  const dataRegionId = product.region_id || product.regionId || "";
+
+  const discountHTML = discountRate
+    ? `<span class="discount">${discountRate}%</span>`
+    : "";
+
+  return `
+    <div
+      class="product-card"
+      data-product-id="${product.product_id || ""}"
+      data-source="${dataSource}"
+      data-region-id="${dataRegionId}"
+    >
+      <div class="product-image">
+        <img src="${imgUrl}" alt="${name}" loading="lazy" />
+        <button class="like-btn">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path
+              d="M10 17L8.5 15.5C3.5 10.5 0 7.5 0 5C0 2.5 2.5 0 5 0C6.5 0 8 0.5 9 1.5C10 0.5 11.5 0 13 0C15.5 0 18 2.5 18 5C18 7.5 14.5 10.5 9.5 15.5L10 17Z"
+              stroke="#666"
+              stroke-width="2"
+            />
+          </svg>
+        </button>
+      </div>
+      <div class="product-info">
+        <div class="brand">${brand}</div>
+        <div class="product-name">${name}</div>
+        <div class="price-info">
+          ${discountHTML}
+          <span class="price">${price}원</span>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 // API 데이터로 제품 렌더링 (세일용)
 function renderProductsFromAPI(products) {
   const productsGrid = document.querySelector(".products-grid");
-  if (!productsGrid) return;
+  if (!productsGrid) {
+    console.error("[세일] products-grid 요소를 찾을 수 없습니다");
+    return;
+  }
 
-  productsGrid.innerHTML = products
-    .map((product, index) => {
-      const rank = index + 1;
-      const price = Number(product.price || 0).toLocaleString();
-      const name = (product.product_name || "").replace(/\s+/g, " ").trim();
-      const brand = product.brand || "";
-      const imgUrl =
-        product.img_url ||
-        "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=260&h=312&fit=crop";
-      const discountRate = product.discount_rate
-        ? Math.round(product.discount_rate)
-        : null;
+  if (!products || products.length === 0) {
+    console.warn("[세일] 제품 데이터가 없습니다.");
+    return;
+  }
 
-      return `
-      <div
-        class="product-card"
-        data-product-id="${product.product_id || ""}"
-        data-source="product_sale"
-        data-region-id="${product.region_id || ""}"
-      >
-        <div class="product-image">
-          <div class="rank-number">${rank}</div>
-          <img src="${imgUrl}" alt="${name}" loading="lazy" />
-          <button class="like-btn">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path
-                d="M10 17L8.5 15.5C3.5 10.5 0 7.5 0 5C0 2.5 2.5 0 5 0C6.5 0 8 0.5 9 1.5C10 0.5 11.5 0 13 0C15.5 0 18 2.5 18 5C18 7.5 14.5 10.5 9.5 15.5L10 17Z"
-                stroke="#666"
-                stroke-width="2"
-              />
-            </svg>
-          </button>
-        </div>
-        <div class="product-info">
-          <div class="brand">${brand}</div>
-          <div class="product-name">${name}</div>
-          <div class="price-info">
-            ${
-              discountRate > 0
-                ? `<span class="discount">${discountRate}%</span>`
-                : ""
-            }
-            <span class="price">${price}원</span>
-          </div>
-        </div>
-      </div>
-    `;
-    })
-    .join("");
+  // 기존 제품 카드 제거
+  productsGrid.innerHTML = "";
+
+  // 제품 카드 생성
+  products.forEach((product) => {
+    productsGrid.insertAdjacentHTML("beforeend", createProductCard(product));
+  });
 
   // 동적으로 생성된 상품 카드에 클릭 이벤트 추가
   addProductCardClickHandlers();
+
+  console.log(`[세일] ${products.length}개 제품 렌더링 완료`);
 }
 
 // 페이지 로드 시 상품 렌더링
@@ -381,27 +435,157 @@ categoryBtns.forEach((btn) => {
 
 // 좋아요 버튼 기능은 addProductCardClickHandlers() 함수에서 처리됨
 
-// 검색 기능
-function performSearch() {
-  const searchTerm = searchInput.value.trim();
-  if (searchTerm) {
-    console.log("검색어:", searchTerm);
-    // 실제 검색 로직 구현
-    searchProducts(searchTerm);
+// 검색 섹션 클릭 시 검색 페이지로 이동
+(function setupSearchSectionRedirect() {
+  console.log("[검색 리디렉션] 초기화 시작...");
+
+  function redirectToSearch() {
+    console.log("[검색 리디렉션] 🔵🔵🔵 리디렉션 실행!");
+    window.location.href = "../search/index.html";
   }
-}
 
-if (searchBtn) {
-  searchBtn.addEventListener("click", performSearch);
-}
-
-if (searchInput) {
-  searchInput.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") {
-      performSearch();
+  function initRedirect() {
+    const searchSection = document.querySelector(".search-section");
+    if (!searchSection) {
+      console.log(
+        "[검색 리디렉션] search-section 요소를 찾을 수 없습니다. 재시도 중..."
+      );
+      setTimeout(initRedirect, 100);
+      return;
     }
-  });
-}
+
+    console.log("[검색 리디렉션] ✅ search-section 요소 발견!");
+    searchSection.style.cursor = "pointer";
+
+    // 검색 입력창과 버튼 찾기
+    const searchInput = searchSection.querySelector(".search-input");
+    const searchBtnInSection = searchSection.querySelector(".search-btn");
+
+    console.log("[검색 리디렉션] 요소 확인:", {
+      searchInput: !!searchInput,
+      searchBtnInSection: !!searchBtnInSection,
+      searchInputId: searchInput?.id,
+      searchBtnClass: searchBtnInSection?.className,
+    });
+
+    // 검색 입력창 처리
+    if (searchInput) {
+      // 기존 이벤트 리스너 제거를 위해 요소 복제
+      const newInput = searchInput.cloneNode(true);
+      if (searchInput.parentNode) {
+        searchInput.parentNode.replaceChild(newInput, searchInput);
+      }
+
+      const input = searchSection.querySelector(".search-input");
+      if (input) {
+        input.style.cursor = "pointer";
+        input.readOnly = true; // 입력 불가능하게 설정
+        input.setAttribute("tabindex", "0");
+
+        // 여러 이벤트 타입으로 처리
+        const handlers = {
+          click: function (e) {
+            console.log("[검색 리디렉션] 🔵 입력창 클릭!");
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            redirectToSearch();
+            return false;
+          },
+          mousedown: function (e) {
+            console.log("[검색 리디렉션] 🔵 입력창 마우스다운!");
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            redirectToSearch();
+            return false;
+          },
+          focus: function (e) {
+            console.log("[검색 리디렉션] 🔵 입력창 포커스!");
+            e.preventDefault();
+            e.stopPropagation();
+            redirectToSearch();
+            return false;
+          },
+          keydown: function (e) {
+            if (e.key === "Enter" || e.keyCode === 13) {
+              console.log("[검색 리디렉션] 🔵 입력창 Enter!");
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+              redirectToSearch();
+              return false;
+            }
+          },
+        };
+
+        // 모든 이벤트를 capture phase에서 등록
+        Object.entries(handlers).forEach(([event, handler]) => {
+          input.addEventListener(event, handler, true);
+        });
+      }
+    }
+
+    // 검색 버튼 처리
+    if (searchBtnInSection) {
+      // 기존 이벤트 리스너 제거를 위해 요소 복제
+      const newBtn = searchBtnInSection.cloneNode(true);
+      if (searchBtnInSection.parentNode) {
+        searchBtnInSection.parentNode.replaceChild(newBtn, searchBtnInSection);
+      }
+
+      const btn = searchSection.querySelector(".search-btn");
+      if (btn) {
+        const handlers = {
+          click: function (e) {
+            console.log("[검색 리디렉션] 🔵 버튼 클릭!");
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            redirectToSearch();
+            return false;
+          },
+          mousedown: function (e) {
+            console.log("[검색 리디렉션] 🔵 버튼 마우스다운!");
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            redirectToSearch();
+            return false;
+          },
+        };
+
+        // 모든 이벤트를 capture phase에서 등록
+        Object.entries(handlers).forEach(([event, handler]) => {
+          btn.addEventListener(event, handler, true);
+        });
+      }
+    }
+
+    // 검색 섹션 전체 클릭 처리 (최후의 수단)
+    const sectionHandler = function (e) {
+      const clickedInput = e.target.closest(".search-input");
+      const clickedBtn = e.target.closest(".search-btn");
+
+      if (!clickedInput && !clickedBtn) {
+        console.log("[검색 리디렉션] 🔵 섹션 클릭!");
+        redirectToSearch();
+      }
+    };
+
+    searchSection.addEventListener("click", sectionHandler, true);
+
+    console.log("[검색 리디렉션] ✅ 설정 완료!");
+  }
+
+  // 즉시 실행 또는 DOM 로드 대기
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initRedirect);
+  } else {
+    // DOM이 이미 로드된 경우 약간의 지연을 두고 실행
+    setTimeout(initRedirect, 10);
+  }
+})();
 
 // 상품 필터링 함수들
 function filterProductsByCountry(country) {

@@ -490,6 +490,11 @@ async function loadSectionProducts(sectionId, userId, type, regionId = null) {
       console.log(
         `[${type}] 성공: ${normalizedProducts.length}개 제품 로드 완료 (user_id: ${userId})`
       );
+      
+      // 활동 섹션인 경우 태그별 제품 존재 여부 확인 후 버튼 업데이트
+      if (type === "activity" && sectionId === "activity-section") {
+        updateActivityTagsBasedOnProducts(normalizedProducts);
+      }
     } else {
       console.warn(`[${type}] 경고: 제품이 없습니다 (user_id: ${userId})`, {
         responseData: data,
@@ -549,9 +554,27 @@ function createProductCardFromAPI(product) {
   const price = Number(product.price || 0).toLocaleString();
   const name = (product.product_name || "").replace(/\s+/g, " ").trim();
   const brand = product.brand || "";
-  const imgUrl =
-    product.img_url ||
-    "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=260&h=312&fit=crop";
+  
+  // 이미지 URL 유효성 검사 및 정규화
+  const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=260&h=312&fit=crop";
+  let imgUrl = FALLBACK_IMAGE;
+  if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+    const url = product.images[0];
+    if (url && typeof url === "string" && url.trim() && url.trim() !== "null" && url.trim() !== "undefined") {
+      imgUrl = url.trim();
+    }
+  } else if (product.img_url) {
+    const url = product.img_url;
+    if (url && typeof url === "string" && url.trim() && url.trim() !== "null" && url.trim() !== "undefined") {
+      imgUrl = url.trim();
+    }
+  } else if (product.image_url) {
+    const url = product.image_url;
+    if (url && typeof url === "string" && url.trim() && url.trim() !== "null" && url.trim() !== "undefined") {
+      imgUrl = url.trim();
+    }
+  }
+  
   const discountRate = product.discount_rate
     ? Math.round(product.discount_rate)
     : null;
@@ -561,7 +584,7 @@ function createProductCardFromAPI(product) {
 
   card.innerHTML = `
     <div class="product-image">
-      <img src="${imgUrl}" alt="${name}" loading="lazy" />
+      <img src="${imgUrl}" alt="${name}" loading="lazy" onerror="this.src='${FALLBACK_IMAGE}'" />
       <button class="like-btn">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
           <path
@@ -680,13 +703,31 @@ function setupMoreButton(grid, totalProducts, currentCount = 9) {
   });
 }
 
-// 로컬 스토리지에서 유저 정보 가져오기 (메인 페이지와 동일)
+// 로컬 스토리지에서 유저 정보 가져오기 (1시간 만료 체크)
 function getUserFromStorage() {
   try {
     const stored = localStorage.getItem("fitpl_user");
-    return stored ? JSON.parse(stored) : null;
+    if (!stored) return null;
+    
+    const userData = JSON.parse(stored);
+    
+    // 만료 시간 체크
+    if (userData.expires_at) {
+      const expiresAt = new Date(userData.expires_at);
+      const now = new Date();
+      
+      if (now > expiresAt) {
+        // 만료되었으면 삭제하고 null 반환
+        console.log("로컬 스토리지 데이터가 만료되었습니다. 삭제합니다.");
+        localStorage.removeItem("fitpl_user");
+        return null;
+      }
+    }
+    
+    return userData;
   } catch (e) {
     console.error("로컬 스토리지 파싱 오류:", e);
+    localStorage.removeItem("fitpl_user"); // 오류 시 삭제
     return null;
   }
 }
@@ -694,7 +735,7 @@ function getUserFromStorage() {
 // DOM 요소 선택
 const tabButtons = document.querySelectorAll(".tab-btn");
 const weatherTags = document.querySelectorAll(".weather-tag");
-const activityTags = document.querySelectorAll(".activity-tag");
+// 활동 태그는 동적으로 생성되므로 여기서는 초기화하지 않음
 const snapTags = document.querySelectorAll(".snap-tag");
 const locationTags = document.querySelectorAll(".location-tag");
 const likeButtons = document.querySelectorAll(".like-btn");
@@ -737,15 +778,229 @@ weatherTags.forEach((tag) => {
 // 활동 태그 한글 텍스트를 API activity_tag로 매핑
 function mapActivityTagToAPI(한글태그) {
   const mapping = {
-    "자연체험": ["national_park", "zoo", "aquarium"],
-    "휴양": ["beach", "hot_spring"],
-    "테마파크": ["theme_park"],
-    "레저": ["yacht_cruise", "observation_deck"],
-    "스포츠": ["hiking"],
-    "도시관광": ["city_tour", "market_night", "cafe_hopping", "outlet_mall"],
-    "문화/예술": ["art_museum", "museum", "cathedral_church", "temple_shrine"],
+    "휴양": [
+      "beach", "hot_spring",           // 기본 휴양 태그
+      "national_park", "zoo", "aquarium",  // 자연체험 통합
+    ],
+    "테마파크": [
+      "theme_park",                    // 기본 테마파크
+      "hiking",                        // 스포츠 통합
+    ],
+    "레저": [
+      "yacht_cruise", "observation_deck",  // 기본 레저
+    ],
+    "도시관광": [
+      "city_tour", "market_night", "cafe_hopping", "outlet_mall",  // 기본 도시관광
+      "art_museum", "museum", "cathedral_church", "temple_shrine",  // 문화/예술 통합
+    ],
   };
   return mapping[한글태그] || null;
+}
+
+// 제품 데이터를 기반으로 활동 태그 버튼 업데이트
+// 모든 버튼을 먼저 표시하고, 클릭 시 일치하는 제품이 0개인 경우에만 숨김
+function updateActivityTagsBasedOnProducts(products) {
+  const activitySection = document.getElementById("activity-section");
+  if (!activitySection) return;
+  
+  const activityTagsContainer = activitySection.querySelector(".activity-tags");
+  if (!activityTagsContainer) return;
+  
+  // 태그 정의 (4개 버튼만 사용)
+  const tagDefinitions = {
+    "휴양": [
+      "beach", "hot_spring",           // 기본 휴양 태그
+      "national_park", "zoo", "aquarium",  // 자연체험 통합
+    ],
+    "테마파크": [
+      "theme_park",                    // 기본 테마파크
+      "hiking",                        // 스포츠 통합
+    ],
+    "레저": [
+      "yacht_cruise", "observation_deck",  // 기본 레저
+    ],
+    "도시관광": [
+      "city_tour", "market_night", "cafe_hopping", "outlet_mall",  // 기본 도시관광
+      "art_museum", "museum", "cathedral_church", "temple_shrine",  // 문화/예술 통합
+    ],
+  };
+  
+  // 제품들의 activity_tag 추출 (소문자로 정규화)
+  const productTags = new Set();
+  products.forEach(p => {
+    if (p?.activity_tag) {
+      productTags.add(String(p.activity_tag).toLowerCase().trim());
+    }
+  });
+  
+  console.log("[활동 태그 업데이트] 제품 태그:", Array.from(productTags));
+  console.log("[활동 태그 업데이트] 전체 제품 수:", products.length);
+  console.log("[활동 태그 업데이트] activity_tag가 있는 제품 수:", products.filter(p => p?.activity_tag).length);
+  
+  // 제품 데이터를 dataset에 저장 (태그 클릭 시 사용)
+  const productGrid = activitySection.querySelector(".product-grid");
+  if (productGrid && products.length > 0) {
+    productGrid.dataset.allProducts = JSON.stringify(products);
+  }
+  
+  // 기존 버튼 모두 제거
+  activityTagsContainer.innerHTML = "";
+  
+  // 제품이 있는 태그만 버튼 생성 (처음부터 필터링)
+  const allTags = Object.keys(tagDefinitions);
+  const availableTags = [];
+  
+  console.log(`[활동 태그 업데이트] 태그별 제품 존재 여부 확인 중...`);
+  
+  allTags.forEach((tagText) => {
+    const apiTags = tagDefinitions[tagText];
+    const normalizedApiTags = apiTags.map(tag => String(tag).toLowerCase().trim());
+    const hasMatchingProduct = normalizedApiTags.some(apiTag => productTags.has(apiTag));
+    
+    if (hasMatchingProduct) {
+      availableTags.push(tagText);
+      const matchedTags = normalizedApiTags.filter(apiTag => productTags.has(apiTag));
+      console.log(`[활동 태그 업데이트] ✅ ${tagText}: 제품 있음 (일치하는 태그: ${matchedTags.join(', ')})`);
+    } else {
+      console.log(`[활동 태그 업데이트] ❌ ${tagText}: 제품 없음 - 버튼 생성 안 함`);
+    }
+  });
+  
+  // 제품이 있는 태그만 버튼으로 생성
+  availableTags.forEach((tagText, index) => {
+    const button = document.createElement("button");
+    button.className = "activity-tag";
+    button.textContent = tagText;
+    if (index === 0) {
+      button.classList.add("active");
+    }
+    activityTagsContainer.appendChild(button);
+  });
+  
+  console.log(`[활동 태그 업데이트] ✅ 완료: 총 ${availableTags.length}개 태그 버튼 생성됨 (${availableTags.join(', ')})`);
+  
+  // 새로 생성된 버튼들에 이벤트 리스너 재등록
+  setupActivityTagListeners();
+}
+
+// 활동 태그 버튼 이벤트 리스너 설정 함수
+function setupActivityTagListeners() {
+  const activitySection = document.getElementById("activity-section");
+  if (!activitySection) return;
+  
+  const activityTags = activitySection.querySelectorAll(".activity-tag");
+  
+  activityTags.forEach((tag) => {
+    // 기존 리스너 제거를 위해 클론 후 교체
+    const newTag = tag.cloneNode(true);
+    tag.parentNode.replaceChild(newTag, tag);
+  });
+  
+  // 새로 가져온 태그들에 이벤트 리스너 등록
+  const newActivityTags = activitySection.querySelectorAll(".activity-tag");
+  
+  newActivityTags.forEach((tag) => {
+    tag.addEventListener("click", async (e) => {
+      const clickedTag = e.target;
+      const tagText = clickedTag.textContent.trim();
+      
+      // active 상태 토글
+      const section = clickedTag.closest("section");
+      const sectionActivityTags = section.querySelectorAll(".activity-tag");
+      switchTab(clickedTag, sectionActivityTags);
+      
+      // 활동별 추천 섹션에서만 작동
+      if (section?.id !== "activity-section") return;
+      
+      const productGrid = section.querySelector(".product-grid");
+      if (!productGrid) return;
+      
+      // 저장된 제품 데이터 가져오기
+      const storedProducts = productGrid.dataset.allProducts;
+      if (!storedProducts) {
+        console.warn("[활동 태그] 저장된 제품 데이터가 없습니다.");
+        return;
+      }
+      
+      try {
+        const allProducts = JSON.parse(storedProducts);
+        const activityTags = mapActivityTagToAPI(tagText);
+        
+        if (!activityTags) {
+          console.warn(`[활동 태그] ${tagText}에 대한 매핑이 없습니다.`);
+          return;
+        }
+        
+        console.log(`[활동 태그] ${tagText} 클릭, activity_tags:`, activityTags);
+        
+        // activity_tag 배열로 정렬
+        const sortedProducts = sortProductsByActivityTag(allProducts, activityTags);
+        
+        // 일치하는 제품 수 확인
+        const normalizedTags = activityTags.map(tag => String(tag).toLowerCase().trim());
+        
+        // 디버깅: 실제 제품들의 activity_tag 값 확인
+        const allProductTags = allProducts.map(p => String(p?.activity_tag || "").toLowerCase().trim()).filter(t => t);
+        const uniqueProductTags = [...new Set(allProductTags)];
+        console.log(`[활동 태그 디버깅] ${tagText} 클릭 시:`);
+        console.log(`  - 검색할 태그들:`, normalizedTags);
+        console.log(`  - 제품 데이터의 실제 activity_tag 값들:`, uniqueProductTags);
+        console.log(`  - 매칭 여부 확인:`);
+        normalizedTags.forEach(searchTag => {
+          const matches = uniqueProductTags.filter(pt => pt === searchTag || pt.includes(searchTag) || searchTag.includes(pt));
+          console.log(`    - "${searchTag}": ${matches.length > 0 ? `✅ 매칭됨 (${matches.join(', ')})` : '❌ 매칭 안 됨'}`);
+        });
+        
+        const matchingProducts = sortedProducts.filter(p => {
+          const productTag = String(p?.activity_tag || "").toLowerCase().trim();
+          return normalizedTags.includes(productTag);
+        });
+        console.log(`  - ${tagText} 태그와 일치하는 제품 수: ${matchingProducts.length}`);
+        
+        // 매칭되지 않은 경우 부분 매칭도 시도 (디버깅용)
+        if (matchingProducts.length === 0) {
+          const partialMatches = sortedProducts.filter(p => {
+            const productTag = String(p?.activity_tag || "").toLowerCase().trim();
+            return normalizedTags.some(searchTag => 
+              productTag.includes(searchTag) || searchTag.includes(productTag)
+            );
+          });
+          if (partialMatches.length > 0) {
+            console.warn(`[활동 태그] 부분 매칭 발견: ${partialMatches.length}개 제품이 유사한 태그를 가지고 있습니다.`);
+            console.warn(`  - 부분 매칭 제품들의 activity_tag:`, [...new Set(partialMatches.map(p => p?.activity_tag))]);
+          }
+        }
+        
+        // 일치하는 제품이 0개이면 경고만 표시 (버튼은 이미 생성 시 필터링됨)
+        if (matchingProducts.length === 0) {
+          console.warn(`[활동 태그] ${tagText} 태그와 일치하는 제품이 없습니다.`);
+          // 원래 데이터로 되돌림
+          renderProductsToGrid(productGrid, allProducts, 9, false, true);
+          // active 클래스 제거하고 다른 버튼을 active로 설정
+          clickedTag.classList.remove("active");
+          const remainingTags = Array.from(sectionActivityTags);
+          if (remainingTags.length > 0 && remainingTags[0] !== clickedTag) {
+            remainingTags[0].classList.add("active");
+            // 첫 번째 남은 태그로 제품 다시 렌더링
+            const firstTagText = remainingTags[0].textContent.trim();
+            const firstActivityTags = mapActivityTagToAPI(firstTagText);
+            if (firstActivityTags) {
+              const firstSortedProducts = sortProductsByActivityTag(allProducts, firstActivityTags);
+              renderProductsToGrid(productGrid, firstSortedProducts, 9, false, true);
+            }
+          }
+          return;
+        }
+        
+        // 일치하는 제품이 상위로 정렬된 목록으로 재렌더링
+        renderProductsToGrid(productGrid, sortedProducts, 9, false, true);
+        
+        console.log(`[활동 태그] 제품 정렬 완료: 총 ${sortedProducts.length}개`);
+      } catch (error) {
+        console.error("[활동 태그] 제품 정렬 실패:", error);
+      }
+    });
+  });
 }
 
 // 제품을 activity_tag로 정렬 (일치하는 것을 상위로, 신발은 아래로)
@@ -790,7 +1045,14 @@ function sortProductsByActivityTag(products, activityTags) {
   });
 }
 
-// 액티비티 태그 전환 기능
+// 액티비티 태그 전환 기능 (제거됨 - 이제 updateActivityTagsBasedOnProducts에서 동적으로 처리)
+// 기존 HTML 버튼이 있으면 초기화
+if (document.querySelectorAll(".activity-tag").length > 0) {
+  setupActivityTagListeners();
+}
+
+// 주석 처리된 기존 코드 (제품 로드 후 동적으로 버튼이 생성되므로 불필요)
+/*
 activityTags.forEach((tag) => {
   tag.addEventListener("click", async (e) => {
     const clickedTag = e.target;
@@ -862,6 +1124,22 @@ activityTags.forEach((tag) => {
         return;
       }
       
+      // 일치하는 제품이 0개이면 경고 표시하고 원래 데이터로 되돌림
+      if (matchingProducts.length === 0) {
+        console.warn(`[활동 태그] ${tagText} 태그와 일치하는 제품이 없습니다. 원래 데이터로 되돌립니다.`);
+        // 원래 데이터로 되돌림
+        renderProductsToGrid(productGrid, allProducts, 9, false, true);
+        // 버튼 비활성화 (클릭한 버튼에서 active 클래스 제거)
+        clickedTag.classList.remove("active");
+        // 첫 번째 버튼을 active로 설정 (또는 기본값으로)
+        const firstTag = sectionActivityTags[0];
+        if (firstTag) {
+          firstTag.classList.add("active");
+        }
+        alert(`${tagText} 태그와 일치하는 제품이 없습니다.`);
+        return;
+      }
+      
       // 일치하는 제품이 상위로 정렬된 목록으로 재렌더링
       // preserveOriginalData=true로 설정하여 원본 데이터를 유지
       renderProductsToGrid(productGrid, sortedProducts, 9, false, true);
@@ -872,6 +1150,7 @@ activityTags.forEach((tag) => {
     }
   });
 });
+*/
 
 // 스냅 태그 전환 기능
 snapTags.forEach((tag) => {

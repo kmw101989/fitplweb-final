@@ -115,8 +115,6 @@ class FigmaSearchPageController {
       );
     }
 
-
-
     // 카테고리 태그 클릭
     document.querySelectorAll(".category-tag").forEach((tag) => {
       tag.addEventListener("click", (e) => {
@@ -185,38 +183,112 @@ class FigmaSearchPageController {
     const searchInput = document.getElementById("searchInput");
     const searchTerm = searchInput.value.trim();
 
-    if (!searchTerm) {
-      this.showToast("검색어를 입력해주세요", "warning");
+    // 경우 1: 태그 활성화되었지만 검색어가 없는 경우 → 해당 국가 페이지로 이동
+    if (!searchTerm && this.selectedCountry) {
+      console.log(
+        "[검색] 경우 1: 태그 활성화 + 검색어 없음 →",
+        this.selectedCountry,
+        "페이지로 이동"
+      );
+      const defaultRegionId =
+        this.countryToDefaultRegionId[this.selectedCountry];
+      if (defaultRegionId) {
+        this.navigateToDetailPageWithRegion(
+          this.selectedCountry,
+          defaultRegionId
+        );
+      } else {
+        this.navigateToDetailPageWithRegion(this.selectedCountry, null);
+      }
       return;
     }
 
+    // 경우 2: 태그 없이 지역명 입력 시 → 해당 지역 페이지로 이동
+    if (searchTerm && !this.selectedCountry) {
+      // 모든 지역명 확인 (국가 무관)
+      const matchingRegion = Object.keys(this.regionNameToId).find(
+        (region) =>
+          region === searchTerm ||
+          region.includes(searchTerm) ||
+          searchTerm.includes(region)
+      );
+
+      if (matchingRegion) {
+        console.log(
+          "[검색] 경우 2: 지역명 입력 →",
+          matchingRegion,
+          "페이지로 이동"
+        );
+        const regionId = this.regionNameToId[matchingRegion];
+
+        // 지역명에 해당하는 국가 찾기
+        const regionToCountry = {
+          도쿄: "일본",
+          오사카: "일본",
+          상하이: "중국",
+          광저우: "중국",
+          가오슝: "대만",
+          타이베이: "대만",
+          방콕: "태국",
+          치앙마이: "태국",
+          다낭: "베트남",
+          하노이: "베트남",
+          마닐라: "필리핀",
+          세부: "필리핀",
+          홍콩: "홍콩",
+          마카오: "홍콩",
+          발리: "인도네시아",
+          자카르타: "인도네시아",
+          괌: "미국",
+          하와이: "미국",
+          싱가포르: "싱가포르",
+          시드니: "호주",
+        };
+
+        const country = regionToCountry[matchingRegion];
+        if (country) {
+          this.navigateToDetailPageWithRegion(country, regionId);
+          return;
+        }
+      }
+    }
+
     // 국가가 선택되었고, 검색어가 해당 국가의 지역명인지 확인
-    if (this.selectedCountry) {
+    if (this.selectedCountry && searchTerm) {
       const regions = this.countryRegionMap[this.selectedCountry] || [];
       const matchingRegion = regions.find((region) => region === searchTerm);
-      
+
       if (matchingRegion) {
         // 지역명과 일치하면 해당 국가의 Detailpage로 이동
         const regionId = this.regionNameToId[matchingRegion];
         this.navigateToDetailPageWithRegion(this.selectedCountry, regionId);
         return;
       } else {
-        // 지역명이 아니면 일반 검색으로 처리하거나 국가 페이지로 이동
-        const defaultRegionId = this.countryToDefaultRegionId[this.selectedCountry];
-        this.navigateToDetailPageWithRegion(this.selectedCountry, defaultRegionId);
+        // 지역명이 아니면 국가 페이지로 이동
+        const defaultRegionId =
+          this.countryToDefaultRegionId[this.selectedCountry];
+        this.navigateToDetailPageWithRegion(
+          this.selectedCountry,
+          defaultRegionId
+        );
         return;
       }
     }
 
-    // 국가가 선택되지 않았을 때는 일반 검색 처리
-    this.addToSearchHistory(searchTerm);
-    this.showToast(`"${searchTerm}" 검색 중...`, "info");
+    // 일반 검색 (태그도 없고 지역명도 아닌 경우)
+    if (searchTerm) {
+      this.addToSearchHistory(searchTerm);
+      this.showToast(`"${searchTerm}" 검색 중...`, "info");
 
-    // 검색 시뮬레이션
-    setTimeout(() => {
-      this.showToast(`"${searchTerm}" 검색 결과를 찾았습니다`, "success");
-      this.updateSearchUI(searchTerm);
-    }, 1000);
+      // 검색 시뮬레이션
+      setTimeout(() => {
+        this.showToast(`"${searchTerm}" 검색 결과를 찾았습니다`, "success");
+        this.updateSearchUI(searchTerm);
+      }, 1000);
+    } else {
+      // 검색어도 없고 태그도 없으면 아무것도 하지 않음
+      console.log("[검색] 검색어 없음 + 태그 없음");
+    }
   }
 
   // 검색어 히스토리에 추가
@@ -259,8 +331,12 @@ class FigmaSearchPageController {
 
   // 태그 선택 (목록에 스타일 변경 + 검색창에 표시)
   selectTag(tagElement, country) {
-    const selectedTagsContainer = document.getElementById("selectedTagsContainer");
-    const categoryTagsSection = document.querySelector(".category-tags-section");
+    const selectedTagsContainer = document.getElementById(
+      "selectedTagsContainer"
+    );
+    const categoryTagsSection = document.querySelector(
+      ".category-tags-section"
+    );
 
     // 원본 태그에 selected 클래스 추가 (스타일 변경)
     tagElement.classList.add("selected");
@@ -269,7 +345,7 @@ class FigmaSearchPageController {
     const tagClone = tagElement.cloneNode(true);
     tagClone.dataset.isClone = "true";
     tagClone.dataset.originalTag = "true";
-    
+
     // x 버튼 추가
     if (!tagClone.querySelector(".tag-remove")) {
       const removeBtn = document.createElement("span");
@@ -295,13 +371,17 @@ class FigmaSearchPageController {
 
   // 태그 선택 해제
   deselectTag(tagElement) {
-    const selectedTagsContainer = document.getElementById("selectedTagsContainer");
-    
+    const selectedTagsContainer = document.getElementById(
+      "selectedTagsContainer"
+    );
+
     // 원본 태그에서 selected 클래스 제거
     tagElement.classList.remove("selected");
-    
+
     // 검색창의 복제본 제거
-    const clone = selectedTagsContainer.querySelector(`[data-category="${tagElement.dataset.category}"][data-is-clone="true"]`);
+    const clone = selectedTagsContainer.querySelector(
+      `[data-category="${tagElement.dataset.category}"][data-is-clone="true"]`
+    );
     if (clone) {
       clone.remove();
     }
@@ -317,12 +397,16 @@ class FigmaSearchPageController {
 
   // 태그를 검색바로 이동 (단순 버전)
   moveTagToSearchBarSimple(tagElement) {
-    const selectedTagsContainer = document.getElementById("selectedTagsContainer");
-    const categoryTagsSection = document.querySelector(".category-tags-section");
-    
+    const selectedTagsContainer = document.getElementById(
+      "selectedTagsContainer"
+    );
+    const categoryTagsSection = document.querySelector(
+      ".category-tags-section"
+    );
+
     // 이미 검색창에 있는지 확인
     const isInSearchBar = tagElement.parentElement === selectedTagsContainer;
-    
+
     if (isInSearchBar) {
       // 이미 검색창에 있으면 원래 위치로 이동
       this.moveTagBackToCategorySimple(tagElement);
@@ -333,11 +417,11 @@ class FigmaSearchPageController {
       if (originalIndex >= 0) {
         tagElement.dataset.originalIndex = originalIndex;
       }
-      
+
       // 태그를 search-bar로 이동
       selectedTagsContainer.appendChild(tagElement);
       tagElement.classList.add("selected");
-      
+
       // x 버튼이 없으면 추가
       if (!tagElement.querySelector(".tag-remove")) {
         const removeBtn = document.createElement("span");
@@ -349,27 +433,34 @@ class FigmaSearchPageController {
         });
         tagElement.appendChild(removeBtn);
       }
-      
+
       selectedTagsContainer.style.display = "flex";
     }
   }
-  
+
   // 태그를 다시 category-tags-section으로 이동 (단순 버전)
   moveTagBackToCategorySimple(tagElement) {
-    const selectedTagsContainer = document.getElementById("selectedTagsContainer");
-    const categoryTagsSection = document.querySelector(".category-tags-section");
-    
+    const selectedTagsContainer = document.getElementById(
+      "selectedTagsContainer"
+    );
+    const categoryTagsSection = document.querySelector(
+      ".category-tags-section"
+    );
+
     // x 버튼 제거
     const removeBtn = tagElement.querySelector(".tag-remove");
     if (removeBtn) {
       removeBtn.remove();
     }
-    
+
     // 원래 인덱스 가져오기
     const originalIndex = parseInt(tagElement.dataset.originalIndex);
-    
+
     // category-tags-section으로 이동
-    if (!isNaN(originalIndex) && originalIndex < categoryTagsSection.children.length) {
+    if (
+      !isNaN(originalIndex) &&
+      originalIndex < categoryTagsSection.children.length
+    ) {
       // 원래 위치에 삽입
       const referenceTag = categoryTagsSection.children[originalIndex];
       categoryTagsSection.insertBefore(tagElement, referenceTag);
@@ -377,9 +468,9 @@ class FigmaSearchPageController {
       // 인덱스가 유효하지 않으면 마지막에 추가
       categoryTagsSection.appendChild(tagElement);
     }
-    
+
     tagElement.classList.remove("selected");
-    
+
     // 선택된 태그가 없으면 컨테이너 숨기기
     if (selectedTagsContainer.children.length === 0) {
       selectedTagsContainer.style.display = "none";

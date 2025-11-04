@@ -1,0 +1,43 @@
+# Node modules
+node_modules/
+fitpl-db-bridge/node_modules/
+
+# Netlify/Build artifacts
+.netlify/
+dist/
+build/
+
+# Logs and deployment files
+*.log
+fitpl_배포.bat
+deploy_fitpl.log
+
+# Environment files
+.env
+.env.*
+*.local
+
+# OS/IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# Database bridge source (not needed for deployment)
+fitpl-db-bridge/server.js
+fitpl-db-bridge/package.json
+fitpl-db-bridge/railway.json
+fitpl-db-bridge/DEPLOY_GUIDE.md
+
+# Documentation
+*.md
+NETLIFY_SETUP.md
+GOOGLE_SCRIPT_SETUP.md
+
+# Scripts
+scripts/
+

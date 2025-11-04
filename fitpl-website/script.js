@@ -1,8 +1,16 @@
 // 검색 모달 관련 변수
+console.log("[검색 초기화] 스크립트 로드됨");
 const searchModal = document.getElementById("searchModal");
 const searchInputModal = document.getElementById("searchInputModal");
 const searchButtonModal = document.getElementById("searchButtonModal");
 const closeButtonModal = document.getElementById("closeButtonModal");
+
+console.log("[검색 초기화] 요소 확인:", {
+  searchModal: !!searchModal,
+  searchInputModal: !!searchInputModal,
+  searchButtonModal: !!searchButtonModal,
+  closeButtonModal: !!closeButtonModal,
+});
 
 // 검색 모달 기능
 function showSearchModal() {
@@ -26,13 +34,156 @@ function hideSearchModal() {
 }
 
 // 검색 섹션 클릭 시 검색 페이지로 이동
-const searchSection = document.querySelector(".search-section");
-if (searchSection) {
-  searchSection.style.cursor = "pointer";
-  searchSection.addEventListener("click", () => {
+(function setupSearchSectionRedirect() {
+  console.log("[검색 리디렉션] 초기화 시작...");
+
+  function redirectToSearch() {
+    console.log("[검색 리디렉션] 🔵🔵🔵 리디렉션 실행!");
     window.location.href = "../search/index.html";
-  });
-}
+  }
+
+  function initRedirect() {
+    const searchSection = document.querySelector(".search-section");
+    if (!searchSection) {
+      console.log(
+        "[검색 리디렉션] search-section 요소를 찾을 수 없습니다. 재시도 중..."
+      );
+      setTimeout(initRedirect, 100);
+      return;
+    }
+
+    console.log("[검색 리디렉션] ✅ search-section 요소 발견!");
+    searchSection.style.cursor = "pointer";
+
+    // 검색 입력창과 버튼 찾기
+    const searchInput = searchSection.querySelector(".search-input");
+    const searchBtnInSection = searchSection.querySelector(".search-btn");
+
+    console.log("[검색 리디렉션] 요소 확인:", {
+      searchInput: !!searchInput,
+      searchBtnInSection: !!searchBtnInSection,
+      searchInputId: searchInput?.id,
+      searchBtnClass: searchBtnInSection?.className,
+    });
+
+    // 검색 입력창 처리
+    if (searchInput) {
+      // 기존 이벤트 리스너 제거를 위해 요소 복제
+      const newInput = searchInput.cloneNode(true);
+      if (searchInput.parentNode) {
+        searchInput.parentNode.replaceChild(newInput, searchInput);
+      }
+
+      const input = searchSection.querySelector(".search-input");
+      if (input) {
+        input.style.cursor = "pointer";
+        input.readOnly = true; // 입력 불가능하게 설정
+        input.setAttribute("tabindex", "0");
+
+        // 여러 이벤트 타입으로 처리
+        const handlers = {
+          click: function (e) {
+            console.log("[검색 리디렉션] 🔵 입력창 클릭!");
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            redirectToSearch();
+            return false;
+          },
+          mousedown: function (e) {
+            console.log("[검색 리디렉션] 🔵 입력창 마우스다운!");
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            redirectToSearch();
+            return false;
+          },
+          focus: function (e) {
+            console.log("[검색 리디렉션] 🔵 입력창 포커스!");
+            e.preventDefault();
+            e.stopPropagation();
+            redirectToSearch();
+            return false;
+          },
+          keydown: function (e) {
+            if (e.key === "Enter" || e.keyCode === 13) {
+              console.log("[검색 리디렉션] 🔵 입력창 Enter!");
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+              redirectToSearch();
+              return false;
+            }
+          },
+        };
+
+        // 모든 이벤트를 capture phase에서 등록
+        Object.entries(handlers).forEach(([event, handler]) => {
+          input.addEventListener(event, handler, true);
+        });
+      }
+    }
+
+    // 검색 버튼 처리
+    if (searchBtnInSection) {
+      // 기존 이벤트 리스너 제거를 위해 요소 복제
+      const newBtn = searchBtnInSection.cloneNode(true);
+      if (searchBtnInSection.parentNode) {
+        searchBtnInSection.parentNode.replaceChild(newBtn, searchBtnInSection);
+      }
+
+      const btn = searchSection.querySelector(".search-btn");
+      if (btn) {
+        const handlers = {
+          click: function (e) {
+            console.log("[검색 리디렉션] 🔵 버튼 클릭!");
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            redirectToSearch();
+            return false;
+          },
+          mousedown: function (e) {
+            console.log("[검색 리디렉션] 🔵 버튼 마우스다운!");
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            redirectToSearch();
+            return false;
+          },
+        };
+
+        // 모든 이벤트를 capture phase에서 등록
+        Object.entries(handlers).forEach(([event, handler]) => {
+          btn.addEventListener(event, handler, true);
+        });
+      }
+    }
+
+    // 검색 섹션 전체 클릭 처리 (최후의 수단)
+    const sectionHandler = function (e) {
+      const clickedInput = e.target.closest(".search-input");
+      const clickedBtn = e.target.closest(".search-btn");
+
+      if (!clickedInput && !clickedBtn) {
+        console.log("[검색 리디렉션] 🔵 섹션 클릭!");
+        redirectToSearch();
+      }
+    };
+
+    searchSection.addEventListener("click", sectionHandler, true);
+
+    console.log("[검색 리디렉션] ✅ 설정 완료!");
+  }
+
+  // 즉시 실행 또는 DOM 로드 대기
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initRedirect);
+  } else {
+    // DOM이 이미 로드된 경우 약간의 지연을 두고 실행
+    setTimeout(initRedirect, 10);
+  }
+})();
 
 // 모달 외부 클릭 시 닫기
 if (searchModal) {
@@ -54,29 +205,325 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-// 검색 모달 내부 검색 기능
-if (searchButtonModal) {
-  searchButtonModal.addEventListener("click", () => {
-    const searchTerm = searchInputModal.value.trim();
-    if (searchTerm) {
-      console.log("모달에서 검색:", searchTerm);
-      // 실제 검색 로직 구현
-      searchProducts(searchTerm);
-      hideSearchModal();
-    }
-  });
+// 지역명과 region_id 매핑
+const regionNameToId = {
+  도쿄: 1,
+  오사카: 2,
+  상하이: 3,
+  광저우: 4,
+  가오슝: 5,
+  타이베이: 6,
+  방콕: 7,
+  치앙마이: 8,
+  다낭: 9,
+  하노이: 10,
+  마닐라: 11,
+  세부: 12,
+  홍콩: 13,
+  마카오: 14,
+  발리: 15,
+  자카르타: 16,
+  괌: 17,
+  하와이: 18,
+  싱가포르: 19,
+  시드니: 20,
+};
+
+// 카테고리 태그와 국가명 매핑
+const categoryToCountry = {
+  beauty: "일본",
+  player: "베트남",
+  outlet: "중국",
+  boutique: "홍콩",
+  shoes: "대만",
+  kids: "태국",
+  used: "라오스",
+  travel: "싱가포르",
+  america: "미국",
+  australia: "호주",
+};
+
+// 국가명과 기본 region_id 매핑
+const countryToDefaultRegionId = {
+  일본: 1, // 도쿄
+  베트남: 10, // 하노이
+  중국: 3, // 상하이
+  홍콩: 13,
+  대만: 6, // 타이베이
+  태국: 7, // 방콕
+  싱가포르: 19,
+  미국: 17, // 괌
+  호주: 20, // 시드니
+  라오스: null, // 기본 지역 없음
+};
+
+// 활성화된 카테고리 태그 확인
+function getActiveCategoryTag() {
+  // 모달 내부와 모달 외부 모두에서 찾기
+  const activeTag = document.querySelector(".category-tag.selected");
+  console.log("[검색 디버깅] 활성화된 태그:", activeTag);
+  if (activeTag) {
+    const category = activeTag.dataset.category;
+    const country = categoryToCountry[category];
+    console.log("[검색 디버깅] 카테고리:", category, "→ 국가:", country);
+    return country || null;
+  }
+  console.log("[검색 디버깅] 활성화된 태그 없음");
+  return null;
 }
 
-if (searchInputModal) {
-  searchInputModal.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") {
-      const searchTerm = searchInputModal.value.trim();
-      if (searchTerm) {
-        console.log("모달에서 검색:", searchTerm);
-        searchProducts(searchTerm);
-        hideSearchModal();
+// 지역명으로 검색하는 함수
+function navigateToRegionPage(regionName) {
+  console.log("[검색 디버깅] navigateToRegionPage 호출:", regionName);
+  const regionId = regionNameToId[regionName];
+  console.log("[검색 디버깅] regionId:", regionId);
+
+  if (regionId) {
+    // 지역명과 국가 매핑
+    const regionToCountry = {
+      도쿄: "일본",
+      오사카: "일본",
+      상하이: "중국",
+      광저우: "중국",
+      가오슝: "대만",
+      타이베이: "대만",
+      방콕: "태국",
+      치앙마이: "태국",
+      다낭: "베트남",
+      하노이: "베트남",
+      마닐라: "필리핀",
+      세부: "필리핀",
+      홍콩: "홍콩",
+      마카오: "홍콩",
+      발리: "인도네시아",
+      자카르타: "인도네시아",
+      괌: "미국",
+      하와이: "미국",
+      싱가포르: "싱가포르",
+      시드니: "호주",
+    };
+
+    const country = regionToCountry[regionName];
+    console.log("[검색 디버깅] 매핑된 국가:", country);
+
+    if (country) {
+      const params = new URLSearchParams();
+      params.set("country", country);
+      params.set("region_id", regionId);
+      const url = `../Detailpage/index.html?${params.toString()}`;
+      console.log("[검색 디버깅] 최종 이동 URL:", url);
+      window.location.href = url;
+      return true;
+    } else {
+      console.log("[검색 디버깅] 국가 매핑 실패");
+    }
+  } else {
+    console.log("[검색 디버깅] regionId 찾기 실패");
+  }
+  return false;
+}
+
+// 검색 실행 함수 (통합)
+function executeSearch() {
+  console.log("[검색] executeSearch 함수 호출됨");
+
+  const searchInput = document.getElementById("searchInputModal");
+  const searchTerm = searchInput?.value.trim() || "";
+  const activeCountry = getActiveCategoryTag();
+
+  console.log("[검색] 검색어:", searchTerm, "활성 국가:", activeCountry);
+
+  // 경우 1: 태그 활성화되었지만 검색어가 없는 경우 → 해당 국가 페이지로 이동
+  if (!searchTerm && activeCountry) {
+    console.log("[검색] ✅ 경우 1 실행: 태그 활성화 + 검색어 없음");
+    const defaultRegionId = countryToDefaultRegionId[activeCountry];
+    if (defaultRegionId) {
+      const params = new URLSearchParams();
+      params.set("country", activeCountry);
+      params.set("region_id", defaultRegionId);
+      const url = `../Detailpage/index.html?${params.toString()}`;
+      console.log("[검색] 이동 URL:", url);
+      window.location.href = url;
+      return true;
+    } else {
+      const params = new URLSearchParams();
+      params.set("country", activeCountry);
+      const url = `../Detailpage/index.html?${params.toString()}`;
+      console.log("[검색] 이동 URL (기본 지역 없음):", url);
+      window.location.href = url;
+      return true;
+    }
+  }
+
+  // 경우 2: 지역명 입력 시 → 해당 지역 페이지로 이동
+  if (searchTerm) {
+    console.log("[검색] 경우 2 체크: 지역명 매칭 중...");
+    const matchingRegion = Object.keys(regionNameToId).find(
+      (region) =>
+        region === searchTerm ||
+        region.includes(searchTerm) ||
+        searchTerm.includes(region)
+    );
+
+    console.log("[검색] 매칭된 지역:", matchingRegion);
+
+    if (matchingRegion) {
+      console.log("[검색] ✅ 경우 2 실행: 지역명으로 페이지 이동");
+      if (navigateToRegionPage(matchingRegion)) {
+        return true;
       }
     }
+  }
+
+  // 일반 검색 (검색어가 있는 경우만)
+  if (searchTerm) {
+    console.log("[검색] 일반 검색 실행:", searchTerm);
+    searchProducts(searchTerm);
+    hideSearchModal();
+    return true;
+  } else if (!activeCountry) {
+    console.log("[검색] 검색어 없음 + 태그 없음 - 아무 동작 없음");
+  }
+
+  return false;
+}
+
+// 검색 모달 내부 검색 기능 (우선순위 높게 실행)
+function setupSearchButtonHandler() {
+  const btn = document.getElementById("searchButtonModal");
+  if (!btn) {
+    console.log("[검색] searchButtonModal 요소를 찾을 수 없습니다");
+    return;
+  }
+
+  console.log("[검색] 검색 버튼 이벤트 리스너 설정 중...");
+
+  // 모든 기존 이벤트 리스너 제거
+  const newBtn = btn.cloneNode(true);
+  btn.parentNode.replaceChild(newBtn, btn);
+
+  const searchBtn = document.getElementById("searchButtonModal");
+  const searchInput = document.getElementById("searchInputModal");
+
+  if (!searchBtn) {
+    console.log("[검색] 검색 버튼을 찾을 수 없습니다");
+    return;
+  }
+
+  searchBtn.addEventListener(
+    "click",
+    function handleSearchClick(e) {
+      console.log("[검색] 🔵 검색 버튼 클릭 이벤트 발생!");
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation(); // 다른 리스너도 차단
+
+      executeSearch();
+    },
+    true
+  ); // capture phase에서 먼저 실행
+
+  console.log("[검색] 검색 버튼 이벤트 리스너 설정 완료");
+}
+
+// Enter 키 이벤트 설정
+function setupSearchInputHandler() {
+  const input = document.getElementById("searchInputModal");
+  if (!input) {
+    console.log("[검색] searchInputModal 요소를 찾을 수 없습니다");
+    return;
+  }
+
+  console.log("[검색] 검색 입력창 이벤트 리스너 설정 중...");
+
+  // 기존 리스너 제거 후 재설정
+  const newInput = input.cloneNode(true);
+  input.parentNode.replaceChild(newInput, input);
+
+  const searchInput = document.getElementById("searchInputModal");
+
+  searchInput.addEventListener(
+    "keypress",
+    function handleEnterKey(e) {
+      if (e.key === "Enter") {
+        console.log("[검색] 🔵 Enter 키 입력 이벤트 발생!");
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        executeSearch();
+      }
+    },
+    true
+  );
+
+  // 참조 업데이트
+  window.searchInputModal = searchInput;
+  console.log("[검색] 검색 입력창 이벤트 리스너 설정 완료");
+}
+
+// DOM 로드 후 실행 및 주기적 재설정
+function initializeSearchHandlers() {
+  console.log("[검색 초기화] initializeSearchHandlers 호출됨");
+  setupSearchButtonHandler();
+  setupSearchInputHandler();
+  console.log("[검색 초기화] 완료");
+}
+
+console.log("[검색 초기화] document.readyState:", document.readyState);
+
+if (document.readyState === "loading") {
+  console.log("[검색 초기화] DOMContentLoaded 이벤트 등록");
+  document.addEventListener("DOMContentLoaded", () => {
+    console.log("[검색 초기화] DOMContentLoaded 이벤트 발생");
+    initializeSearchHandlers();
+  });
+} else {
+  console.log("[검색 초기화] DOM 이미 로드됨, 즉시 실행");
+  initializeSearchHandlers();
+}
+
+// 모달 열릴 때마다 재설정 (원본 함수 오버라이드)
+const originalShowSearchModal = window.showSearchModal;
+window.showSearchModal = function () {
+  if (
+    originalShowSearchModal &&
+    originalShowSearchModal !== window.showSearchModal
+  ) {
+    originalShowSearchModal.call(this);
+  } else {
+    // 기본 동작
+    const modal = document.getElementById("searchModal");
+    if (modal) {
+      modal.classList.add("show");
+      document.body.style.overflow = "hidden";
+      setTimeout(() => {
+        const input = document.getElementById("searchInputModal");
+        if (input) input.focus();
+      }, 300);
+    }
+  }
+  // 이벤트 리스너 재설정 (다른 스크립트가 덮어쓸 수 있으므로)
+  setTimeout(initializeSearchHandlers, 150);
+};
+
+// MutationObserver로 모달이 열릴 때 감지
+const modalObserver = new MutationObserver((mutations) => {
+  mutations.forEach((mutation) => {
+    if (mutation.type === "attributes" && mutation.attributeName === "class") {
+      const modal = document.getElementById("searchModal");
+      if (modal && modal.classList.contains("show")) {
+        setTimeout(initializeSearchHandlers, 50);
+      }
+    }
+  });
+});
+
+// searchModal은 이미 상단에서 선언되었으므로 중복 선언 제거
+if (searchModal) {
+  modalObserver.observe(searchModal, {
+    attributes: true,
+    attributeFilter: ["class"],
   });
 }
 
@@ -116,30 +563,90 @@ document.querySelectorAll(".rank-item").forEach((item) => {
   });
 });
 
-// 카테고리 태그 클릭 이벤트
-document.querySelectorAll(".category-tag").forEach((tag) => {
-  tag.addEventListener("click", (e) => {
-    const category = e.target.dataset.category;
-    const categoryNames = {
-      beauty: "뷰티",
-      player: "플레이어",
-      outlet: "아울렛",
-      boutique: "부티크",
-      shoes: "슈즈",
-      kids: "키즈",
-      used: "유즈드",
-      travel: "트래블",
-    };
+// 카테고리 태그 클릭 이벤트 (중복 방지)
+let categoryTagListenersSetup = false;
 
-    const categoryName = categoryNames[category];
-    if (categoryName) {
-      console.log(`${categoryName} 카테고리 선택`);
-      // 카테고리별 필터링 로직 구현
-      filterProductsByCategory(categoryName);
-      hideSearchModal();
-    }
+function setupCategoryTagListeners() {
+  // 이미 설정되었으면 중복 방지
+  if (categoryTagListenersSetup) {
+    console.log("[태그 디버깅] 리스너 이미 설정됨");
+    return;
+  }
+
+  const tags = document.querySelectorAll(".category-tag");
+  console.log(`[태그 디버깅] ${tags.length}개 태그에 리스너 설정`);
+
+  tags.forEach((tag) => {
+    // 기존 리스너 제거 (이벤트 위임 방식으로 변경)
+    tag.removeEventListener("click", handleCategoryTagClick);
+    tag.addEventListener("click", handleCategoryTagClick);
   });
+
+  categoryTagListenersSetup = true;
+}
+
+function handleCategoryTagClick(e) {
+  e.stopPropagation();
+  e.preventDefault();
+
+  const tag = e.currentTarget || e.target.closest(".category-tag");
+  if (!tag) return;
+
+  const category = tag.dataset.category;
+  const country = categoryToCountry[category];
+
+  console.log(
+    "[태그 디버깅] 태그 클릭 - 카테고리:",
+    category,
+    "국가:",
+    country
+  );
+
+  if (!country) {
+    console.log("[태그 디버깅] 국가 매핑 실패");
+    return;
+  }
+
+  // 이미 선택된 태그인지 확인
+  const isCurrentlySelected = tag.classList.contains("selected");
+  console.log("[태그 디버깅] 현재 선택 상태:", isCurrentlySelected);
+
+  // 모든 태그 선택 해제
+  document.querySelectorAll(".category-tag").forEach((t) => {
+    t.classList.remove("selected");
+  });
+
+  if (!isCurrentlySelected) {
+    // 태그 선택
+    tag.classList.add("selected");
+    console.log(`[태그 디버깅] ${country} 태그 활성화됨`);
+    console.log(
+      `[태그 디버깅] selected 클래스 추가 확인:`,
+      tag.classList.contains("selected")
+    );
+  } else {
+    // 태그 선택 해제
+    console.log(`[태그 디버깅] ${country} 태그 비활성화됨`);
+  }
+}
+
+// 페이지 로드 시 카테고리 태그 리스너 설정
+document.addEventListener("DOMContentLoaded", () => {
+  setupCategoryTagListeners();
 });
+
+// 모달이 열릴 때도 리스너 다시 설정
+// topbar의 검색 버튼 (모달을 여는 버튼)
+const topbarSearchBtn = document.querySelector(".topbar .search-btn");
+if (topbarSearchBtn) {
+  const originalSearchBtnClick = topbarSearchBtn.onclick;
+  topbarSearchBtn.addEventListener("click", () => {
+    setTimeout(() => {
+      categoryTagListenersSetup = false; // 리셋하여 다시 설정
+      setupCategoryTagListeners();
+    }, 100);
+  });
+}
 
 // 최근 검색어 삭제 기능
 const deleteRecentBtnModal = document.getElementById("deleteRecentBtnModal");
@@ -165,8 +672,9 @@ if (deleteBrandBtnModal) {
 const filterBtns = document.querySelectorAll(".filter-btn");
 const categoryBtns = document.querySelectorAll(".category-btn");
 const likeBtns = document.querySelectorAll(".like-btn");
-const searchInput = document.querySelector(".search-input");
-const searchBtn = document.querySelector(".search-btn");
+// searchInput과 searchBtn은 이미 다른 곳에서 선언되었거나 사용되지 않으므로 중복 선언 제거
+// const searchInput = document.querySelector(".search-input");
+// const searchBtn = document.querySelector(".search-btn");
 const navLinks = document.querySelectorAll(".nav-link");
 const logoutBtn = document.querySelector(".logout-btn");
 
@@ -217,27 +725,28 @@ likeBtns.forEach((btn) => {
   });
 });
 
-// 검색 기능
-function performSearch() {
-  const searchTerm = searchInput.value.trim();
-  if (searchTerm) {
-    console.log("검색어:", searchTerm);
-    // 실제 검색 로직 구현
-    searchProducts(searchTerm);
-  }
-}
+// 검색 기능 - 메인페이지에서는 검색창 클릭 시 search 페이지로 이동하므로 비활성화
+// function performSearch() {
+//   const searchTerm = searchInput.value.trim();
+//   if (searchTerm) {
+//     console.log("검색어:", searchTerm);
+//     // 실제 검색 로직 구현
+//     searchProducts(searchTerm);
+//   }
+// }
 
-if (searchBtn) {
-  searchBtn.addEventListener("click", performSearch);
-}
+// 메인페이지의 검색창은 클릭 시 search 페이지로 리디렉션되므로 performSearch 비활성화
+// if (searchBtn) {
+//   searchBtn.addEventListener("click", performSearch);
+// }
 
-if (searchInput) {
-  searchInput.addEventListener("keypress", (e) => {
-    if (e.key === "Enter") {
-      performSearch();
-    }
-  });
-}
+// if (searchInput) {
+//   searchInput.addEventListener("keypress", (e) => {
+//     if (e.key === "Enter") {
+//       performSearch();
+//     }
+//   });
+// }
 
 // 상품 필터링 함수들
 function filterProductsByCountry(country) {
@@ -319,7 +828,7 @@ const header = document.querySelector(".top-nav");
 if (header) {
   window.addEventListener("scroll", () => {
     if (!header) return; // 추가 안전 체크
-    
+
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
 
     if (scrollTop > lastScrollTop && scrollTop > 100) {
@@ -1094,18 +1603,112 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // 국가 라디오 변경 시 에러 지우기
+  // 국가-도시 매핑
+  const countryToCities = {
+    일본: ["도쿄", "오사카"],
+    중국: ["상하이", "광저우"],
+    대만: ["타이베이", "가오슝"],
+    태국: ["방콕", "치앙마이"],
+    베트남: ["하노이", "다낭"],
+    필리핀: ["마닐라", "세부"],
+    홍콩: ["홍콩"],
+    마카오: ["마카오"],
+    인도네시아: ["자카르타", "발리"],
+    미국: ["괌", "하와이"],
+    싱가포르: ["싱가포르"],
+    호주: ["시드니"],
+  };
+
+  // 국가 선택 시 해당 국가의 도시만 표시
+  function filterCitiesByCountry(countryName) {
+    if (!cityList) {
+      console.warn("cityList가 없습니다.");
+      return;
+    }
+
+    const cities = countryToCities[countryName] || [];
+    console.log(
+      `[도시 필터링] 선택된 국가: ${countryName}, 표시할 도시:`,
+      cities
+    );
+
+    const cityItems = cityList.querySelectorAll("li.option-item");
+    console.log(`[도시 필터링] 전체 도시 항목 수: ${cityItems.length}`);
+
+    cityItems.forEach((item) => {
+      const input = item.querySelector("input");
+      const cityName = input?.value;
+
+      if (cityName) {
+        if (cities.includes(cityName)) {
+          item.style.display = "";
+          console.log(`[도시 필터링] 표시: ${cityName}`);
+        } else {
+          item.style.display = "none";
+          // 숨겨진 도시의 선택 해제
+          if (input && input.checked) {
+            input.checked = false;
+            renderChips(chipsCity, [], null);
+          }
+          console.log(`[도시 필터링] 숨김: ${cityName}`);
+        }
+      }
+    });
+  }
+
+  // 초기 로드 시 모든 도시 숨기기 (국가 선택 전까지)
+  function hideAllCities() {
+    if (!cityList) return;
+    const cityItems = cityList.querySelectorAll("li.option-item");
+    cityItems.forEach((item) => {
+      item.style.display = "none";
+    });
+  }
+
+  // 초기 로드 시 도시 숨기기
+  hideAllCities();
+
+  // 국가 라디오 변경 시 에러 지우기 및 도시 필터링
   if (countryList) {
-    countryList.addEventListener("change", () => {
+    countryList.addEventListener("change", (e) => {
+      console.log("[국가 선택] 이벤트 발생:", e.target.value);
+
       if (countryError) countryError.textContent = "";
       const selected = document.querySelector('input[name="country"]:checked');
+
+      console.log("[국가 선택] 선택된 국가:", selected?.value);
+
+      // 국가 선택 시 도시 필터링
+      if (selected) {
+        filterCitiesByCountry(selected.value);
+        // 도시 필드 열기
+        const cityField = cityList?.closest(".form-field");
+        if (cityField) {
+          cityField.classList.remove("collapsed");
+        }
+      } else {
+        // 국가 선택 해제 시 모든 도시 숨기기
+        hideAllCities();
+      }
+
       renderChips(chipsCountry, selected ? [selected.value] : [], (value) => {
         const input = countryList.querySelector(`input[value="${value}"]`);
         if (input) input.checked = false;
         renderChips(chipsCountry, [], null);
+        // 국가 선택 해제 시 모든 도시 숨기기
+        hideAllCities();
       });
       collapseField(countryList.closest(".form-field"));
     });
+
+    // 이미 선택된 국가가 있는 경우 (예: 페이지 리로드 후)
+    const initialSelected = document.querySelector(
+      'input[name="country"]:checked'
+    );
+    if (initialSelected) {
+      console.log("[초기 로드] 이미 선택된 국가 발견:", initialSelected.value);
+      filterCitiesByCountry(initialSelected.value);
+    }
   }
 
   // 대분류 체크 변경 시 에러 지우기
@@ -1206,7 +1809,7 @@ document.addEventListener("DOMContentLoaded", () => {
       );
       if (!selectedCountry) {
         if (countryError)
-          countryError.textContent = "여행지역을 1개 선택해 주세요.";
+          countryError.textContent = "국가를 1개 선택해 주세요.";
         return;
       }
 
@@ -1364,7 +1967,10 @@ document.addEventListener("DOMContentLoaded", () => {
           if (result.ok) {
             console.log("사용자 등록 성공:", result);
 
-            // 로컬 스토리지에 유저 정보 저장
+            // 로컬 스토리지에 유저 정보 저장 (1시간 만료)
+            const expiresAt = new Date();
+            expiresAt.setHours(expiresAt.getHours() + 1); // 1시간 후 만료
+
             const userData = {
               user_id: result.user_id,
               trip_region_id: submitData.trip_region_id,
@@ -1373,6 +1979,7 @@ document.addEventListener("DOMContentLoaded", () => {
               indoor_outdoor: submitData.indoor_outdoor,
               activity_tags: submitData.activity_tags,
               registered_at: new Date().toISOString(),
+              expires_at: expiresAt.toISOString(), // 만료 시간 추가
             };
             localStorage.setItem("fitpl_user", JSON.stringify(userData));
             console.log("로컬 스토리지에 저장됨:", userData);
@@ -1454,13 +2061,31 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ---- 유저 ID 관리 유틸리티 ----
-// 로컬 스토리지에서 유저 정보 가져오기
+// 로컬 스토리지에서 유저 정보 가져오기 (1시간 만료 체크)
 function getUserFromStorage() {
   try {
     const stored = localStorage.getItem("fitpl_user");
-    return stored ? JSON.parse(stored) : null;
+    if (!stored) return null;
+
+    const userData = JSON.parse(stored);
+
+    // 만료 시간 체크
+    if (userData.expires_at) {
+      const expiresAt = new Date(userData.expires_at);
+      const now = new Date();
+
+      if (now > expiresAt) {
+        // 만료되었으면 삭제하고 null 반환
+        console.log("로컬 스토리지 데이터가 만료되었습니다. 삭제합니다.");
+        localStorage.removeItem("fitpl_user");
+        return null;
+      }
+    }
+
+    return userData;
   } catch (e) {
     console.error("로컬 스토리지 파싱 오류:", e);
+    localStorage.removeItem("fitpl_user"); // 오류 시 삭제
     return null;
   }
 }
@@ -1583,13 +2208,52 @@ if (
 
 // ---- 제품 표시 기능 ----
 // 제품 카드 HTML 생성 함수
+// Fallback 이미지 URL
+const FALLBACK_IMAGE_URL =
+  "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=260&h=312&fit=crop";
+
+// 이미지 URL 유효성 검사 및 정규화
+function normalizeImageUrl(url) {
+  if (!url || typeof url !== "string") return FALLBACK_IMAGE_URL;
+
+  const trimmed = url.trim();
+  if (
+    !trimmed ||
+    trimmed === "" ||
+    trimmed === "null" ||
+    trimmed === "undefined"
+  ) {
+    return FALLBACK_IMAGE_URL;
+  }
+
+  // 상대 경로인 경우 (http로 시작하지 않으면)
+  if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+    // 상대 경로는 그대로 사용 (서버에서 처리)
+    return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  }
+
+  return trimmed;
+}
+
 function createProductCard(product) {
   const price = Number(product.price || 0).toLocaleString();
   const name = (product.product_name || "").replace(/\s+/g, " ").trim();
   const brand = product.brand || "";
-  const imgUrl =
-    product.img_url ||
-    "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=260&h=312&fit=crop";
+
+  // 이미지 URL 우선순위: product_images 배열의 첫 번째 이미지 > img_url > image_url > fallback
+  let imgUrl = FALLBACK_IMAGE_URL;
+  if (
+    product.images &&
+    Array.isArray(product.images) &&
+    product.images.length > 0
+  ) {
+    imgUrl = normalizeImageUrl(product.images[0]);
+  } else if (product.img_url) {
+    imgUrl = normalizeImageUrl(product.img_url);
+  } else if (product.image_url) {
+    imgUrl = normalizeImageUrl(product.image_url);
+  }
+
   const discountRate = product.discount_rate
     ? Math.round(product.discount_rate)
     : null;
@@ -1609,7 +2273,7 @@ function createProductCard(product) {
       data-region-id="${dataRegionId}"
     >
       <div class="product-image">
-        <img src="${imgUrl}" alt="${name}" loading="lazy" />
+        <img src="${imgUrl}" alt="${name}" loading="lazy" onerror="this.src='${FALLBACK_IMAGE_URL}'" />
         <button class="like-btn">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
             <path
@@ -1800,14 +2464,23 @@ function renderProductsWithSections(
 }
 
 // 게스트 추천 제품 로드
-async function loadGuestProducts() {
+async function loadGuestProducts(regionId = null) {
   const base = "/.netlify/functions/db";
 
   try {
-    console.log("[게스트 추천] API 호출 시작");
+    console.log("[게스트 추천] API 호출 시작", { regionId });
+
+    // region_id 파라미터 추가
+    const climateUrl = regionId
+      ? `${base}?op=guest_reco_climate&region_id=${regionId}`
+      : `${base}?op=guest_reco_climate`;
+    const activityUrl = regionId
+      ? `${base}?op=guest_reco_activity&region_id=${regionId}`
+      : `${base}?op=guest_reco_activity`;
+
     const [climateRes, activityRes] = await Promise.all([
-      fetch(`${base}?op=guest_reco_climate`),
-      fetch(`${base}?op=guest_reco_activity`),
+      fetch(climateUrl),
+      fetch(activityUrl),
     ]);
 
     if (!climateRes.ok) {
@@ -1865,21 +2538,26 @@ async function loadUserProducts(userId) {
   const base = "/.netlify/functions/db";
 
   if (!userId) {
+    console.warn("[유저 추천] user_id가 없습니다.");
     return { climate: [], activity: [] };
   }
 
   try {
+    console.log(`[유저 추천] API 호출 시작 (user_id: ${userId})`);
     const [climateRes, activityRes] = await Promise.all([
       fetch(`${base}?op=user_country_climate_top&user_id=${userId}&limit=20`),
       fetch(`${base}?op=user_country_activity_top&user_id=${userId}&limit=20`),
     ]);
 
+    // 에러 응답 처리
     if (!climateRes.ok) {
       const errorText = await climateRes.text().catch(() => "");
       console.error(
         `[유저 추천] 기후 API 실패: ${climateRes.status}`,
         errorText
       );
+      // 에러가 발생하면 빈 배열 반환하여 fallback 유도
+      throw new Error(`기후 추천 API 실패: ${climateRes.status}`);
     }
     if (!activityRes.ok) {
       const errorText = await activityRes.text().catch(() => "");
@@ -1887,10 +2565,22 @@ async function loadUserProducts(userId) {
         `[유저 추천] 활동 API 실패: ${activityRes.status}`,
         errorText
       );
+      // 에러가 발생하면 빈 배열 반환하여 fallback 유도
+      throw new Error(`활동 추천 API 실패: ${activityRes.status}`);
     }
 
     const climateData = await climateRes.json();
     const activityData = await activityRes.json();
+
+    // API 응답에서 ok: false인 경우도 에러로 처리
+    if (!climateData?.ok || climateData?.error) {
+      console.error("[유저 추천] 기후 API 응답 에러:", climateData?.error);
+      throw new Error(climateData?.error || "기후 추천 API 응답 에러");
+    }
+    if (!activityData?.ok || activityData?.error) {
+      console.error("[유저 추천] 활동 API 응답 에러:", activityData?.error);
+      throw new Error(activityData?.error || "활동 추천 API 응답 에러");
+    }
 
     console.log("[유저 추천] 응답 상세:", {
       climate: {
@@ -1936,18 +2626,46 @@ async function loadAndRenderProducts() {
   let products;
 
   if (user && user.user_id) {
-    // 유저가 있는 경우: 유저 추천 사용
-    console.log("유저 모드: 유저 추천 로드 중...", user.user_id);
-    products = await loadUserProducts(user.user_id);
+    // 유저가 있는 경우
+    console.log("[메인페이지] 유저 모드:", {
+      user_id: user.user_id,
+      trip_region_id: user.trip_region_id,
+    });
 
-    if (products.climate.length === 0 && products.activity.length === 0) {
-      // 유저 추천이 없으면 게스트 추천으로 fallback
-      console.log("유저 추천이 없어 게스트 추천으로 대체");
-      products = await loadGuestProducts();
+    // 메인페이지는 특정 지역 페이지가 아니므로 유저의 trip_region_id를 사용해서 게스트 추천 API를 호출
+    // 또는 유저 추천 API를 시도하고 실패하면 게스트 추천으로 fallback
+    try {
+      products = await loadUserProducts(user.user_id);
+      console.log("[메인페이지] 유저 추천 결과:", {
+        climate: products.climate.length,
+        activity: products.activity.length,
+      });
+
+      // 유저 추천이 비어있거나 에러가 있으면 게스트 추천으로 fallback
+      if (products.climate.length === 0 && products.activity.length === 0) {
+        console.log("[메인페이지] 유저 추천이 비어있어 게스트 추천으로 대체");
+        // 유저의 trip_region_id가 있으면 해당 지역의 게스트 추천 사용
+        if (user.trip_region_id) {
+          products = await loadGuestProducts(user.trip_region_id);
+        } else {
+          products = await loadGuestProducts();
+        }
+      }
+    } catch (error) {
+      console.error(
+        "[메인페이지] 유저 추천 로드 실패, 게스트 추천으로 대체:",
+        error
+      );
+      // 유저의 trip_region_id가 있으면 해당 지역의 게스트 추천 사용
+      if (user.trip_region_id) {
+        products = await loadGuestProducts(user.trip_region_id);
+      } else {
+        products = await loadGuestProducts();
+      }
     }
   } else {
     // 게스트인 경우: 게스트 추천 사용
-    console.log("게스트 모드: 게스트 추천 로드 중...");
+    console.log("[메인페이지] 게스트 모드: 게스트 추천 로드 중...");
     products = await loadGuestProducts();
   }
 
@@ -2000,16 +2718,16 @@ function initializeMainPage() {
   // URL 파라미터 확인 및 정리 (메인페이지는 country 파라미터 불필요)
   const params = new URLSearchParams(window.location.search);
   const countryParam = params.get("country");
-  
+
   if (countryParam) {
     // country 파라미터가 있으면 제거하고 URL 정리
     params.delete("country");
-    const newUrl = params.toString() 
+    const newUrl = params.toString()
       ? `${window.location.pathname}?${params.toString()}`
       : window.location.pathname;
     window.history.replaceState({}, "", newUrl);
   }
-  
+
   // 필터 버튼은 리디렉션만 수행하므로 active 상태 관리 불필요
   // (HTML에서 ALL 버튼만 active 클래스를 가짐)
 }
@@ -2018,7 +2736,7 @@ function initializeMainPage() {
 document.addEventListener("DOMContentLoaded", () => {
   // 메인페이지 초기화
   initializeMainPage();
-  
+
   // 팝업이 닫힌 후 또는 페이지 로드 시 제품 로드
   setTimeout(() => {
     loadAndRenderGuestProducts();

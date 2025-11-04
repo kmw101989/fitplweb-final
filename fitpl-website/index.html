@@ -1342,12 +1342,12 @@
 
             <div class="form-field collapsed">
               <div class="field-title">
-                <label>관심있거나 예정 여행지역 (필수, 1개 선택)</label>
+                <label>관심있거나 여행 예정 국가 (필수, 1개 선택)</label>
                 <button type="button" class="toggle-btn" aria-expanded="false">▼</button>
               </div>
               <div class="selected-chips" id="countryChips"></div>
               <div class="option-panel">
-              <ul class="option-list" id="countryList" role="radiogroup" aria-label="여행지역">
+              <ul class="option-list" id="countryList" role="radiogroup" aria-label="국가">
                 <li class="option-item"><label><input type="radio" name="country" value="일본" /> 일본</label></li>
                 <li class="option-item"><label><input type="radio" name="country" value="중국" /> 중국</label></li>
                 <li class="option-item"><label><input type="radio" name="country" value="대만" /> 대만</label></li>
@@ -1394,7 +1394,7 @@
                 <li class="option-item"><label><input type="radio" name="city" value="시드니" /> 시드니</label></li>
               </ul>
               </div>
-              <div class="helper">한 국가만 선택할 수 있어요.</div>
+              <div class="helper">국가를 선택하면 해당 국가의 도시만 표시됩니다.</div>
               <div class="error-message" id="countryError" aria-live="polite"></div>
             </div>
 
@@ -1471,6 +1471,7 @@
       </div>
     </div>
 
+    <script src="/fitpl-ga-utils.js"></script>
     <script src="/fitpl-website/script.js"></script>
   </body>
 </html>

@@ -322,6 +322,7 @@ body {
   margin: 0;
   box-sizing: border-box;
   overflow: hidden;
+  cursor: pointer;
 }
 
 .snap-section .product-image {
@@ -469,6 +470,7 @@ body {
   background-color: #fff;
   overflow: hidden;
   position: relative;
+  cursor: pointer;
 }
 
 .product-image {

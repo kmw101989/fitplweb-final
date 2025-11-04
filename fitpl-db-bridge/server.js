@@ -119,18 +119,21 @@ app.get("/db", async (req, res) => {
         info.db_ok = false;
         info.db_error = String(e?.message || e);
       }
+      // guest_reco_climate 테이블 구조 확인 (month 컬럼은 제거됨)
       try {
         const [cols] = await pool.query(
-          `SELECT COUNT(*) AS cnt
+          `SELECT COLUMN_NAME, DATA_TYPE 
            FROM INFORMATION_SCHEMA.COLUMNS
            WHERE TABLE_SCHEMA = DATABASE()
              AND TABLE_NAME='guest_reco_climate'
-             AND COLUMN_NAME='month'`
+           ORDER BY ORDINAL_POSITION`
         );
-        info.guest_reco_climate_has_month = (cols?.[0]?.cnt || 0) > 0;
+        info.guest_reco_climate_columns = cols.map((c) => ({
+          name: c.COLUMN_NAME,
+          type: c.DATA_TYPE,
+        }));
       } catch (e) {
-        info.guest_reco_climate_has_month = null;
-        info.cols_error = String(e?.message || e);
+        info.guest_reco_climate_columns_error = String(e?.message || e);
       }
       return res.json(info);
     }
@@ -143,33 +146,19 @@ app.get("/db", async (req, res) => {
       return res.json({ ok: true, count: rows.length, rows });
     }
 
-    // 8-4) 게스트 추천(기후) — month 컬럼 존재 시에만 필터 적용
+    // 8-4) 게스트 추천(기후)
     if (op === "guest_reco_climate") {
       const region_id = req.query.region_id
         ? Number(req.query.region_id)
         : null;
-      const monthParam = (req.query.month || "").slice(0, 7); // YYYY-MM
       const limit = Math.min(Number(req.query.limit || 20), 100);
 
-      // month 컬럼 존재 여부 확인
-      const [cols] = await pool.query(
-        `SELECT COUNT(*) AS cnt
-         FROM INFORMATION_SCHEMA.COLUMNS
-         WHERE TABLE_SCHEMA = DATABASE()
-           AND TABLE_NAME='guest_reco_climate'
-           AND COLUMN_NAME='month'`
-      );
-      const hasMonth = (cols?.[0]?.cnt || 0) > 0;
-
-      let sql = `SELECT * FROM guest_reco_climate WHERE 1=1`;
+      // 제품 5292437 제외
+      let sql = `SELECT * FROM guest_reco_climate WHERE product_id != '5292437'`;
       const params = [];
       if (region_id) {
         sql += ` AND region_id = ?`;
         params.push(region_id);
-      }
-      if (hasMonth && monthParam) {
-        sql += ` AND month = ?`;
-        params.push(monthParam);
       }
       sql += ` ORDER BY base_score DESC, src_priority ASC, product_id ASC LIMIT ?`;
       params.push(limit);
@@ -179,7 +168,6 @@ app.get("/db", async (req, res) => {
         ok: true,
         count: rows.length,
         rows,
-        month_filtered: !!(hasMonth && monthParam),
       });
     }
 
@@ -188,18 +176,14 @@ app.get("/db", async (req, res) => {
       const region_id = req.query.region_id
         ? Number(req.query.region_id)
         : null;
-      const activity_tag = req.query.activity_tag || null;
       const limit = Math.min(Number(req.query.limit || 20), 100);
 
-      let sql = `SELECT * FROM guest_reco_activity WHERE 1=1`;
+      // 제품 5292437 제외
+      let sql = `SELECT * FROM guest_reco_activity WHERE product_id != '5292437'`;
       const params = [];
       if (region_id) {
         sql += ` AND region_id = ?`;
         params.push(region_id);
-      }
-      if (activity_tag) {
-        sql += ` AND activity_tag = ?`;
-        params.push(activity_tag);
       }
       sql += ` ORDER BY base_score DESC, src_priority ASC, product_id ASC LIMIT ?`;
       params.push(limit);
@@ -209,14 +193,22 @@ app.get("/db", async (req, res) => {
     }
 
     // 8-6) 유저별 국가 Top (기후/활동/사진)
+    // 새로운 방식: tmp_current_user 테이블에 user_id 설정 후 뷰 조회
     if (op === "user_country_climate_top") {
       const user_id = Number(req.query.user_id || 0);
       const limit = Math.min(Number(req.query.limit || 20), 100);
       if (!user_id)
         return res.status(400).json({ ok: false, error: "user_id required" });
+      
+      // tmp_current_user 테이블에 user_id 설정
+      await pool.query("TRUNCATE TABLE tmp_current_user");
+      await pool.query("INSERT INTO tmp_current_user VALUES (?)", [user_id]);
+      
+      // 뷰에서 user_id 조건 제거 (뷰가 이미 tmp_current_user를 참조)
+      // 제품 5292437 제외
       const [rows] = await pool.query(
-        `SELECT * FROM v_country_climate_top20_products WHERE user_id = ? LIMIT ?`,
-        [user_id, limit]
+        `SELECT * FROM v_country_climate_top20_products WHERE product_id != '5292437' ORDER BY reco_rank ASC, product_id ASC LIMIT ?`,
+        [limit]
       );
       return res.json({ ok: true, count: rows.length, rows });
     }
@@ -226,10 +218,16 @@ app.get("/db", async (req, res) => {
       const limit = 100; // 최대 1000 row이므로 limit 100 고정
       if (!user_id)
         return res.status(400).json({ ok: false, error: "user_id required" });
-      // v_country_activity_products_all 뷰 사용 (activity_tag 포함)
+      
+      // tmp_current_user 테이블에 user_id 설정
+      await pool.query("TRUNCATE TABLE tmp_current_user");
+      await pool.query("INSERT INTO tmp_current_user VALUES (?)", [user_id]);
+      
+      // 뷰에서 user_id 조건 제거 (뷰가 이미 tmp_current_user를 참조)
+      // 제품 5292437 제외, v_country_activity_products_all 뷰 사용 (activity_tag 포함)
       const [rows] = await pool.query(
-        `SELECT * FROM v_country_activity_products_all WHERE user_id = ? LIMIT ?`,
-        [user_id, limit]
+        `SELECT * FROM v_country_activity_products_all WHERE product_id != '5292437' ORDER BY reco_rank ASC, product_id ASC LIMIT ?`,
+        [limit]
       );
       return res.json({ ok: true, count: rows.length, rows });
     }
@@ -239,9 +237,16 @@ app.get("/db", async (req, res) => {
       const limit = Math.min(Number(req.query.limit || 20), 100);
       if (!user_id)
         return res.status(400).json({ ok: false, error: "user_id required" });
+      
+      // tmp_current_user 테이블에 user_id 설정
+      await pool.query("TRUNCATE TABLE tmp_current_user");
+      await pool.query("INSERT INTO tmp_current_user VALUES (?)", [user_id]);
+      
+      // 뷰에서 user_id 조건 제거 (뷰가 이미 tmp_current_user를 참조)
+      // 제품 5292437 제외
       const [rows] = await pool.query(
-        `SELECT * FROM v_country_photo_top20_products WHERE user_id = ? LIMIT ?`,
-        [user_id, limit]
+        `SELECT * FROM v_country_photo_top20_products WHERE product_id != '5292437' ORDER BY reco_rank ASC, product_id ASC LIMIT ?`,
+        [limit]
       );
       return res.json({ ok: true, count: rows.length, rows });
     }
@@ -304,20 +309,30 @@ app.get("/db", async (req, res) => {
       };
 
       const addUserClimateQuery = (withUser = false) => {
+        // 새로운 방식: withUser가 true이고 userId가 있으면 tmp_current_user 설정
+        if (withUser && userId) {
+          // tmp_current_user 설정 후 뷰 조회 (user_id 조건 제거)
+          pushQuery(
+            "user_country_climate_top_user_setup",
+            "TRUNCATE TABLE tmp_current_user",
+            []
+          );
+          pushQuery(
+            "user_country_climate_top_user_insert",
+            "INSERT INTO tmp_current_user VALUES (?)",
+            [userId]
+          );
+        }
+        
         let sql =
           "SELECT * FROM v_country_climate_top20_products WHERE product_id = ?";
         const params = [productId];
-        if (withUser && userId) {
-          sql += " AND user_id = ?";
-          params.push(userId);
-        }
+        // user_id 조건 제거 (뷰가 이미 tmp_current_user를 참조)
         if (regionId) {
           sql += " AND region_id = ?";
           params.push(regionId);
         }
-        // TODO: DDL 수정 후 reco_rank 컬럼 추가되면 아래 주석 해제
-        // sql += " ORDER BY reco_rank ASC, product_id ASC LIMIT 1";
-        sql += " ORDER BY product_id ASC LIMIT 1";
+        sql += " ORDER BY reco_rank ASC, product_id ASC LIMIT 1";
         pushQuery(
           withUser
             ? "user_country_climate_top_user"
@@ -328,20 +343,30 @@ app.get("/db", async (req, res) => {
       };
 
       const addUserActivityQuery = (withUser = false) => {
+        // 새로운 방식: withUser가 true이고 userId가 있으면 tmp_current_user 설정
+        if (withUser && userId) {
+          // tmp_current_user 설정 후 뷰 조회 (user_id 조건 제거)
+          pushQuery(
+            "user_country_activity_top_user_setup",
+            "TRUNCATE TABLE tmp_current_user",
+            []
+          );
+          pushQuery(
+            "user_country_activity_top_user_insert",
+            "INSERT INTO tmp_current_user VALUES (?)",
+            [userId]
+          );
+        }
+        
         let sql =
           "SELECT * FROM v_country_activity_top20_products WHERE product_id = ?";
         const params = [productId];
-        if (withUser && userId) {
-          sql += " AND user_id = ?";
-          params.push(userId);
-        }
+        // user_id 조건 제거 (뷰가 이미 tmp_current_user를 참조)
         if (regionId) {
           sql += " AND region_id = ?";
           params.push(regionId);
         }
-        // TODO: DDL 수정 후 reco_rank 컬럼 추가되면 아래 주석 해제
-        // sql += " ORDER BY reco_rank ASC, product_id ASC LIMIT 1";
-        sql += " ORDER BY product_id ASC LIMIT 1";
+        sql += " ORDER BY reco_rank ASC, product_id ASC LIMIT 1";
         pushQuery(
           withUser
             ? "user_country_activity_top_user"
@@ -352,20 +377,30 @@ app.get("/db", async (req, res) => {
       };
 
       const addUserPhotoQuery = (withUser = false) => {
+        // 새로운 방식: withUser가 true이고 userId가 있으면 tmp_current_user 설정
+        if (withUser && userId) {
+          // tmp_current_user 설정 후 뷰 조회 (user_id 조건 제거)
+          pushQuery(
+            "user_country_photo_top_user_setup",
+            "TRUNCATE TABLE tmp_current_user",
+            []
+          );
+          pushQuery(
+            "user_country_photo_top_user_insert",
+            "INSERT INTO tmp_current_user VALUES (?)",
+            [userId]
+          );
+        }
+        
         let sql =
           "SELECT * FROM v_country_photo_top20_products WHERE product_id = ?";
         const params = [productId];
-        if (withUser && userId) {
-          sql += " AND user_id = ?";
-          params.push(userId);
-        }
+        // user_id 조건 제거 (뷰가 이미 tmp_current_user를 참조)
         if (regionId) {
           sql += " AND region_id = ?";
           params.push(regionId);
         }
-        // TODO: DDL 수정 후 reco_rank 컬럼 추가되면 아래 주석 해제
-        // sql += " ORDER BY reco_rank ASC, product_id ASC LIMIT 1";
-        sql += " ORDER BY product_id ASC LIMIT 1";
+        sql += " ORDER BY reco_rank ASC, product_id ASC LIMIT 1";
         pushQuery(
           withUser ? "user_country_photo_top_user" : "user_country_photo_top",
           sql,
@@ -398,31 +433,43 @@ app.get("/db", async (req, res) => {
           break;
       }
 
-      pushQuery(
-        "product_ranking",
-        "SELECT * FROM product_ranking WHERE product_id = ? LIMIT 1",
-        [productId]
-      );
+      // sourceHint가 있으면 해당 소스만 우선 확인, 없으면 product_ranking과 products를 먼저 확인
+      if (!sourceHint) {
+        pushQuery(
+          "product_ranking",
+          "SELECT * FROM product_ranking WHERE product_id = ? LIMIT 1",
+          [productId]
+        );
 
-      pushQuery(
-        "products",
-        "SELECT * FROM products WHERE product_id = ? LIMIT 1",
-        [productId]
-      );
+        pushQuery(
+          "products",
+          "SELECT * FROM products WHERE product_id = ? LIMIT 1",
+          [productId]
+        );
+      }
 
-      addGuestClimateQuery(true);
-      addGuestClimateQuery(false);
-      addGuestActivityQuery(true);
-      addGuestActivityQuery(false);
-      addUserClimateQuery(true);
-      addUserClimateQuery(false);
-      addUserActivityQuery(true);
-      addUserActivityQuery(false);
-      addUserPhotoQuery(true);
-      addUserPhotoQuery(false);
+      // sourceHint가 없으면 모든 쿼리 추가 (fallback)
+      if (!sourceHint) {
+        addGuestClimateQuery(true);
+        addGuestClimateQuery(false);
+        addGuestActivityQuery(true);
+        addGuestActivityQuery(false);
+        addUserClimateQuery(true);
+        addUserClimateQuery(false);
+        addUserActivityQuery(true);
+        addUserActivityQuery(false);
+        addUserPhotoQuery(true);
+        addUserPhotoQuery(false);
+      }
 
       for (const q of queryList) {
         try {
+          // TRUNCATE/INSERT 같은 설정 쿼리는 실행만 하고 결과는 무시
+          if (q.name.includes("_setup") || q.name.includes("_insert")) {
+            await pool.query(q.sql, q.params);
+            continue; // 다음 쿼리로 진행
+          }
+          
           const [rows] = await pool.query(q.sql, q.params);
           if (rows.length) {
             product = rows[0];
@@ -469,11 +516,12 @@ app.get("/db", async (req, res) => {
       let related = [];
       if (product.main_category) {
         try {
+          // 제품 5292437 제외
           const [relatedRows] = await pool.query(
             `SELECT product_id, product_name, brand, price,
                     discount_rate, img_url, main_category, sub_category
              FROM product_ranking
-             WHERE main_category = ? AND product_id <> ?
+             WHERE main_category = ? AND product_id <> ? AND product_id != '5292437'
              ORDER BY base_score DESC, product_id ASC
              LIMIT 9`,
             [product.main_category, productId]
@@ -524,6 +572,8 @@ app.get("/db", async (req, res) => {
         params.push(String(req.query.gender_en));
       }
 
+      // 제품 5292437 제외
+      where.push("product_id != '5292437'");
       const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
       const sql = `
         SELECT * FROM product_ranking
@@ -537,7 +587,59 @@ app.get("/db", async (req, res) => {
       return res.json({ ok: true, count: rows.length, rows });
     }
 
-    // 8-8) 알 수 없는 op
+    // 8-8) 세일 제품 조회 (할인율이 있는 제품만 - product_ranking 기반)
+    if (op === "product_sale") {
+      const limit = Math.min(Number(req.query.limit || 60), 200);
+      const offset = Math.max(Number(req.query.offset || 0), 0);
+      const order = String(req.query.order || "monthly_views_desc");
+      const minDiscount = Math.max(Number(req.query.min_discount || 0), 0);
+
+      const allowed = {
+        rank_asc: "rank_index ASC",
+        monthly_views_desc: "monthly_views DESC",
+        sales_desc: "sales DESC",
+        rating_desc: "rating DESC",
+        review_count_desc: "review_count DESC",
+        discount_rate_desc: "discount_rate DESC",
+      };
+      const orderBy = allowed[order] || allowed.monthly_views_desc;
+
+      const where = [];
+      const params = [];
+      
+      // 할인율 필터
+      where.push("discount_rate IS NOT NULL");
+      where.push("discount_rate > 0");
+      if (minDiscount > 0) {
+        where.push("discount_rate >= ?");
+        params.push(minDiscount);
+      }
+
+      if (req.query.main_category) {
+        where.push("main_category = ?");
+        params.push(String(req.query.main_category));
+      }
+      if (req.query.gender_en) {
+        where.push("gender_en = ?");
+        params.push(String(req.query.gender_en));
+      }
+
+      // 제품 5292437 제외
+      where.push("product_id != '5292437'");
+      const whereSql = `WHERE ${where.join(" AND ")}`;
+      const sql = `
+        SELECT * FROM product_ranking
+        ${whereSql}
+        ORDER BY ${orderBy}, product_id ASC
+        LIMIT ? OFFSET ?
+      `;
+      params.push(limit, offset);
+
+      const [rows] = await pool.query(sql, params);
+      return res.json({ ok: true, count: rows.length, rows });
+    }
+
+    // 8-9) 알 수 없는 op
     return res.status(400).json({ ok: false, error: `bad op: ${op}` });
   } catch (err) {
     console.error("[/db] error:", err);

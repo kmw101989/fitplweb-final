@@ -738,6 +738,7 @@ body {
 }
 
 .product-card {
+  cursor: pointer;
   display: inline-flex;
   flex-direction: column;
   width: 260px;

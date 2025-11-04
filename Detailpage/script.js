@@ -484,17 +484,26 @@ async function loadSectionProducts(sectionId, userId, type, regionId = null) {
       __source: sourceLabel,
     }));
 
-    // 활동 또는 기후 섹션인 경우 브랜드 중복 제거
-    let filteredProducts = normalizedProducts;
+    // 1단계: 제품 ID 중복 제거 (모든 섹션에 적용)
+    let filteredProducts = removeDuplicateProductIds(normalizedProducts);
+    const afterProductIdFilter = filteredProducts.length;
+    
+    // 2단계: 활동 또는 기후 섹션인 경우 브랜드 중복 제거
     if (type === "activity" || type === "climate") {
-      filteredProducts = removeDuplicateBrands(normalizedProducts);
+      filteredProducts = removeDuplicateBrands(filteredProducts);
     }
 
     if (filteredProducts.length > 0) {
       // 처음에는 9개만 표시
       renderProductsToGrid(productGrid, filteredProducts, 9);
       console.log(
-        `[${type}] 성공: ${filteredProducts.length}개 제품 로드 완료 (user_id: ${userId}, 원본: ${normalizedProducts.length}개)`
+        `[${type}] 성공: ${filteredProducts.length}개 제품 로드 완료 (user_id: ${userId})`,
+        {
+          원본: normalizedProducts.length,
+          '제품ID 중복제거 후': afterProductIdFilter,
+          '브랜드 중복제거 후': filteredProducts.length,
+          '중복 제거된 제품 수': normalizedProducts.length - filteredProducts.length
+        }
       );
       
       // 활동 섹션인 경우 태그별 제품 존재 여부 확인 후 버튼 업데이트
@@ -515,6 +524,26 @@ async function loadSectionProducts(sectionId, userId, type, regionId = null) {
       userId,
     });
   }
+}
+
+// 제품 ID 중복 제거 함수 (같은 product_id는 하나만 선택)
+function removeDuplicateProductIds(products) {
+  const seenProductIds = new Set();
+  const uniqueProducts = [];
+
+  for (const product of products) {
+    const productId = String(product.product_id || "").trim();
+    
+    // product_id가 없거나 이미 본 product_id인 경우 건너뛰기
+    if (!productId || seenProductIds.has(productId)) {
+      continue;
+    }
+
+    seenProductIds.add(productId);
+    uniqueProducts.push(product);
+  }
+
+  return uniqueProducts;
 }
 
 // 브랜드 중복 제거 함수 (각 브랜드당 하나씩만 선택)
@@ -548,21 +577,8 @@ function renderProductsToGrid(
   // 기존 모든 제품 제거 (하드코딩된 것들 포함)
   grid.innerHTML = "";
 
-  // 활동 또는 기후 섹션인지 확인
-  let isActivityOrClimateSection = false;
-  if (grid && grid.closest) {
-    const section = grid.closest(".section");
-    if (section) {
-      const sectionId = section.id;
-      isActivityOrClimateSection = sectionId === "activity-section" || sectionId === "weather-section";
-    }
-  }
-
-  // 활동 또는 기후 섹션인 경우 브랜드 중복 제거
-  let filteredProducts = products;
-  if (isActivityOrClimateSection) {
-    filteredProducts = removeDuplicateBrands(products);
-  }
+  // 제품 ID 중복 제거 (이미 loadSectionProducts에서 처리했지만, 안전을 위해 다시 한 번)
+  let filteredProducts = removeDuplicateProductIds(products);
 
   // 제품 데이터를 그리드에 저장 (더보기 버튼에서 사용)
   // preserveOriginalData가 true이면 원본 데이터를 유지 (정렬 시 사용)
